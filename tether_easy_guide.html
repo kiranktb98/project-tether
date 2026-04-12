@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tether, Explained Simply</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+    :root {
+      --bg: #090c0b;
+      --bg-soft: #121715;
+      --panel: rgba(18, 23, 21, 0.92);
+      --panel-soft: rgba(22, 28, 25, 0.86);
+      --line: rgba(244, 237, 223, 0.1);
+      --text: #f4eddf;
+      --muted: #a9b1ab;
+      --gold: #d7aa52;
+      --gold-soft: #f2d9a6;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --content-width: 980px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(215, 170, 82, 0.16), transparent 28%),
+        linear-gradient(180deg, #13110d 0%, #0d100f 24%, var(--bg) 100%);
+    }
+
+    .page {
+      padding: 32px 16px 72px;
+    }
+
+    .shell {
+      width: min(var(--content-width), 100%);
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(17, 22, 20, 0.8);
+      color: var(--gold-soft);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero,
+    .section,
+    .summary {
+      margin-top: 24px;
+    }
+
+    .hero-card,
+    .section-card,
+    .summary-card {
+      padding: 32px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), var(--panel-soft));
+      box-shadow: var(--shadow);
+    }
+
+    h1,
+    h2 {
+      margin: 18px 0 14px;
+      font-family: "Cormorant Garamond", serif;
+      font-weight: 600;
+      line-height: 0.94;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      font-size: clamp(3.3rem, 8vw, 6rem);
+      max-width: 10ch;
+    }
+
+    h2 {
+      font-size: clamp(2.4rem, 5vw, 4rem);
+      max-width: 10ch;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.28rem;
+      font-weight: 800;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+      font-size: 1rem;
+    }
+
+    .hero-lead {
+      max-width: 60ch;
+      font-size: 1.08rem;
+      margin-top: 8px;
+    }
+
+    .hero-points {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 28px;
+    }
+
+    .hero-point,
+    .step-card,
+    .why-card {
+      padding: 22px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(10, 14, 13, 0.7);
+    }
+
+    .hero-point span,
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      height: 44px;
+      padding: 0 12px;
+      border-radius: 14px;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, var(--gold), #7d5414);
+      color: #fff8ea;
+      font-weight: 800;
+    }
+
+    .section-head {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .plain-grid,
+    .steps-grid,
+    .why-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .plain-grid {
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+
+    .steps-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .why-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .plain-note {
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(12, 16, 15, 0.72);
+    }
+
+    .plain-note ul,
+    .step-card ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .plain-note li + li,
+    .step-card li + li {
+      margin-top: 8px;
+    }
+
+    .summary-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .summary-row {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(10, 14, 13, 0.68);
+    }
+
+    .summary-row strong {
+      display: block;
+      color: var(--gold-soft);
+      margin-bottom: 6px;
+      font-size: 0.96rem;
+    }
+
+    .summary-row span {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.96rem;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 22px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .button.primary {
+      color: #fff8eb;
+      background: linear-gradient(135deg, var(--gold), #8b5d18);
+      box-shadow: 0 16px 36px rgba(215, 170, 82, 0.18);
+    }
+
+    .button.secondary {
+      color: var(--text);
+      background: rgba(15, 22, 20, 0.8);
+      border: 1px solid var(--line);
+    }
+
+    @media (max-width: 900px) {
+      .hero-points,
+      .plain-grid,
+      .steps-grid,
+      .why-grid,
+      .summary-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 20px 12px 56px;
+      }
+
+      .hero-card,
+      .section-card,
+      .summary-card {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="shell">
+      <section class="hero">
+        <div class="hero-card">
+          <span class="eyebrow">Tether, In Simple Words</span>
+          <h1>It helps coding agents avoid breaking the wrong thing.</h1>
+          <p class="hero-lead">
+            Tether is a safety layer for AI coding tools. It keeps a simple memory of
+            what your project does, checks what a change might affect, and makes sure
+            the important tests and edge cases still pass before the session is done.
+          </p>
+
+          <div class="hero-points">
+            <div class="hero-point">
+              <span>Plan</span>
+              <h3>Before coding</h3>
+              <p>It asks what else this file touches and which features might be at risk.</p>
+            </div>
+            <div class="hero-point">
+              <span>Watch</span>
+              <h3>During coding</h3>
+              <p>It notices drift, targeted failures, and edits that stop matching the original job.</p>
+            </div>
+            <div class="hero-point">
+              <span>Verify</span>
+              <h3>After coding</h3>
+              <p>It checks the main tests and the important edge cases before calling the session complete.</p>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <a class="button primary" href="#what-it-is">What it is</a>
+            <a class="button secondary" href="#how-it-works">How it works</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="what-it-is">
+        <div class="section-card">
+          <div class="section-head">
+            <span class="eyebrow">What It Is</span>
+            <h2>A smart notebook for your codebase.</h2>
+            <p>
+              Tether learns the important parts of your project, remembers what each part
+              is supposed to do, and uses that memory to keep an AI coding session on track.
+            </p>
+          </div>
+
+          <div class="plain-grid">
+            <div class="plain-note">
+              <h3>In easy language</h3>
+              <p>
+                Imagine giving an AI coder a careful checklist before it starts work.
+                That checklist says what matters, what must not break, and which tricky
+                situations still need to be handled. Tether plays that role.
+              </p>
+            </div>
+
+            <div class="plain-note">
+              <h3>What it keeps track of</h3>
+              <ul>
+                <li>Which features exist in the project</li>
+                <li>Which files those features depend on</li>
+                <li>Which edge cases matter most</li>
+                <li>Whether those checks still pass after a change</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="how-it-works">
+        <div class="section-card">
+          <div class="section-head">
+            <span class="eyebrow">How It Works</span>
+            <h2>Four simple steps.</h2>
+            <p>
+              You do a one-time setup, then Tether helps before, during, and after code
+              changes. The goal is simple: catch the quiet mistakes early.
+            </p>
+          </div>
+
+          <div class="steps-grid">
+            <article class="step-card">
+              <div class="step-number">01</div>
+              <h3>Bootstrap</h3>
+              <p>Tether scans the project and builds a feature list so it understands the codebase at a high level.</p>
+              <ul>
+                <li>Finds important features</li>
+                <li>Connects features to files</li>
+                <li>Suggests edge cases to track</li>
+              </ul>
+            </article>
+
+            <article class="step-card">
+              <div class="step-number">02</div>
+              <h3>Plan</h3>
+              <p>Before the AI edits a file, Tether checks what other parts of the project may be affected.</p>
+              <ul>
+                <li>Looks at the target file</li>
+                <li>Matches it to known features</li>
+                <li>Warns when the blast radius is risky</li>
+              </ul>
+            </article>
+
+            <article class="step-card">
+              <div class="step-number">03</div>
+              <h3>Watch</h3>
+              <p>While the session is happening, Tether keeps checking whether the work still matches the intended job.</p>
+              <ul>
+                <li>Runs targeted checks</li>
+                <li>Watches for drift</li>
+                <li>Flags suspicious changes early</li>
+              </ul>
+            </article>
+
+            <article class="step-card">
+              <div class="step-number">04</div>
+              <h3>Verify</h3>
+              <p>At the end, Tether makes sure the main tests pass and the important edge cases pass too.</p>
+              <ul>
+                <li>Re-runs feature checks</li>
+                <li>Checks important edge cases</li>
+                <li>Writes a clear final report</li>
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-card">
+          <div class="section-head">
+            <span class="eyebrow">Why It Helps</span>
+            <h2>Less guessing. Fewer silent breakages.</h2>
+            <p>
+              The hard part of AI coding is not just writing code fast. It is knowing
+              whether the change quietly damaged something else or missed a case nobody remembered to mention.
+            </p>
+          </div>
+
+          <div class="why-grid">
+            <article class="why-card">
+              <h3>It catches side effects early</h3>
+              <p>If a shared file changes, Tether can point out what other feature might be affected.</p>
+            </article>
+
+            <article class="why-card">
+              <h3>It checks forgotten edge cases</h3>
+              <p>It can hold the session open until the higher-confidence must-handle cases are passing too.</p>
+            </article>
+
+            <article class="why-card">
+              <h3>It makes AI coding feel safer</h3>
+              <p>You still move fast, but with a much better chance of catching quiet regressions before they spread.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="summary">
+        <div class="summary-card">
+          <div>
+            <span class="eyebrow">Simple Summary</span>
+            <h2>Tether is the double-check layer for AI coding.</h2>
+            <p>
+              It understands what your project is supposed to do, watches what the agent
+              changes, and helps you catch problems before they turn into hidden regressions.
+            </p>
+          </div>
+
+          <div class="summary-list">
+            <div class="summary-row">
+              <strong>Before</strong>
+              <span>If we change this file, what else could we accidentally hurt?</span>
+            </div>
+            <div class="summary-row">
+              <strong>During</strong>
+              <span>Does this edit still match the job we said we were doing?</span>
+            </div>
+            <div class="summary-row">
+              <strong>After</strong>
+              <span>Did the change pass the main checks and the important edge cases?</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

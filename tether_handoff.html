@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tether — Build Handoff for Claude Code (Opus 4.6)</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --border: #e0e0e0;
+    --code-bg: #f7f7f7; --code-border: #e0e0e0;
+    --inline-code-bg: #f3f3f3; --inline-code-fg: #c7254e;
+    --accent: #4a90e2;
+    --warn-bg: #fff8e1; --warn-border: #f5a623;
+    --info-bg: #e3f2fd; --info-border: #4a90e2;
+    --danger-bg: #fdecea; --danger-border: #d0021b;
+    --success-bg: #e8f5e9; --success-border: #4caf50;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --fg: #e8e8e8; --muted: #999; --border: #2a2d33;
+      --code-bg: #1d2025; --code-border: #2a2d33;
+      --inline-code-bg: #25282e; --inline-code-fg: #ff8da1;
+      --warn-bg: #2a2418; --info-bg: #15263a;
+      --danger-bg: #2e1a1a; --success-bg: #16291a;
+    }
+  }
+  html, body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-size: 16px; line-height: 1.65; color: var(--fg); background: var(--bg); margin: 0; padding: 0; }
+  .container { max-width: 820px; margin: 0 auto; padding: 48px 32px 96px 32px; }
+  h1 { font-size: 38px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.8px; }
+  h2 { font-size: 26px; font-weight: 700; margin: 56px 0 14px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; letter-spacing: -0.3px; }
+  h3 { font-size: 19px; font-weight: 650; margin: 32px 0 10px 0; }
+  h4 { font-size: 16px; font-weight: 650; margin: 22px 0 8px 0; }
+  p { margin: 0 0 14px 0; }
+  ul, ol { margin: 8px 0 16px 0; padding-left: 28px; }
+  li { margin: 4px 0; }
+  code { font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 13.5px; background: var(--inline-code-bg); padding: 2px 6px; border-radius: 4px; color: var(--inline-code-fg); }
+  pre { font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 13px; line-height: 1.55; background: var(--code-bg); border: 1px solid var(--code-border); border-left: 3px solid var(--accent); padding: 14px 18px; border-radius: 6px; overflow-x: auto; margin: 12px 0 18px 0; color: var(--fg); }
+  pre code { background: none; padding: 0; color: var(--fg); font-size: 13px; }
+  .subtitle { font-size: 18px; color: var(--muted); margin: 0 0 6px 0; font-weight: 400; }
+  .meta { font-size: 13px; color: var(--muted); margin: 0 0 32px 0; }
+  .callout { background: var(--warn-bg); border-left: 3px solid var(--warn-border); padding: 12px 18px; margin: 16px 0; border-radius: 4px; font-size: 15px; }
+  .callout-blue { background: var(--info-bg); border-left: 3px solid var(--info-border); padding: 12px 18px; margin: 16px 0; border-radius: 4px; font-size: 15px; }
+  .callout-red { background: var(--danger-bg); border-left: 3px solid var(--danger-border); padding: 12px 18px; margin: 16px 0; border-radius: 4px; font-size: 15px; }
+  .callout-green { background: var(--success-bg); border-left: 3px solid var(--success-border); padding: 12px 18px; margin: 16px 0; border-radius: 4px; font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 18px 0; font-size: 14.5px; }
+  th { background: var(--code-bg); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); font-weight: 650; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .toc { background: var(--code-bg); border: 1px solid var(--code-border); padding: 18px 28px; border-radius: 6px; margin: 24px 0 32px 0; }
+  .toc h3 { margin-top: 0; }
+  .toc ol { margin: 0; padding-left: 24px; }
+  .toc li { margin: 5px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+  strong { color: var(--fg); font-weight: 650; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Tether</h1>
+<p class="subtitle">An impact-analysis &amp; edge-case engine for coding agents — v0.1 build handoff</p>
+<p class="meta">Target builder: Claude Code (Opus 4.6) · Open source from day one · Python 3.11+</p>
+
+<div class="callout-blue">
+<strong>Read this first.</strong> You are Claude Code (Opus 4.6) and you are being asked to build a project called <strong>tether</strong> from scratch. This document is self-contained — it carries all the design decisions and rationale from a planning conversation. <strong>Read the entire document before writing any code.</strong> The "why" sections matter as much as the "what" sections, because they tell you which decisions are load-bearing and which are flexible. Resist the urge to start building until you have a complete mental model. When you do start, follow the build order in Section 16 strictly.
+</div>
+
+<div class="toc">
+<h3>Contents</h3>
+<ol>
+  <li>What you are building</li>
+  <li>The core insight: cheap watcher + expensive worker</li>
+  <li>The two pillars: impact analysis &amp; edge case generation</li>
+  <li>The feature ledger (central concept)</li>
+  <li>The four architectural rules</li>
+  <li>v0.1 scope</li>
+  <li>Tech stack &amp; dependencies</li>
+  <li>Project structure</li>
+  <li>Configuration schema</li>
+  <li>Phase 1 — Bootstrap (one-time)</li>
+  <li>Phase 2 — Plan (per change)</li>
+  <li>Phase 3 — Watch (continuous)</li>
+  <li>Phase 4 — Verify (after change)</li>
+  <li>The Claude Code integration (CLAUDE.md instructions)</li>
+  <li>CLI surface</li>
+  <li>Recommended build order</li>
+  <li>Watcher prompts (verbatim)</li>
+  <li>Competitive landscape</li>
+  <li>Known limitations</li>
+  <li>README &amp; positioning</li>
+</ol>
+</div>
+
+<h2>1. What you are building</h2>
+
+<p><strong>Tether is an impact-analysis and edge-case engine that sits alongside Claude Code (or any coding agent) and helps it make safer, more deliberate changes.</strong></p>
+
+<p>The pain it solves: when you ask a coding agent to add or modify a feature, it usually does what you asked — but it doesn't think through (a) what edge cases the new feature needs to handle, or (b) which other features in your codebase might break as a side effect. So the agent ships code that works for the happy path, breaks an unrelated feature, or misses an obvious edge case. You discover the problem hours later, after the agent has built more code on top of the broken foundation.</p>
+
+<p>Tether prevents this by intervening in three places:</p>
+
+<ol>
+  <li><strong>Before the change:</strong> when Claude Code is about to make a change, tether predicts which other features will be affected and generates the edge cases the new feature needs to handle. Claude Code reads this analysis and either incorporates it, or asks the user to make decisions about ambiguous cases.</li>
+  <li><strong>During the change:</strong> a continuous file watcher monitors the codebase. If Claude Code edits a file, tether runs the tests for every feature whose code touches that file, plus an LLM-based intent check. Drift gets caught immediately.</li>
+  <li><strong>After the change:</strong> tether updates a feature ledger — a structured YAML file that is the source of truth for what features exist, what they do, what status they're in, and which files they live in. The ledger is the project's memory.</li>
+</ol>
+
+<p>The result is a coding workflow where the agent thinks before it acts, the user gets forced clarity about what they're changing and why, and unintended regressions get caught the moment they happen.</p>
+
+<div class="callout">
+<strong>What tether is NOT.</strong> It is not an agent. It does not write code itself. It does not replace tests, linters, or CI. It does not block Claude Code from doing anything — it provides analysis, the user decides. Keep this scope sacred. Every feature creep idea, ask: "does this serve the impact-analysis or edge-case-generation loop, or am I trying to turn tether into something else?" If the latter, drop it.
+</div>
+
+<h2>2. The core insight: cheap watcher + expensive worker</h2>
+
+<p>This is the architectural premise that makes the whole project economically viable. Understand it before designing anything else.</p>
+
+<p>Coding agents like Claude Code use a large model (Sonnet/Opus) for the actual work — reading code, planning changes, writing functions. That work is creative and needs the big brain. But tether's job is fundamentally different. Tether asks structured questions like "which features touch file X?", "what edge cases apply to a rate limiter?", "does this diff align with the ledger?" These questions don't need creative reasoning — they need structured pattern matching.</p>
+
+<p>A small fast model — Claude Haiku 4.5 — can answer them reliably at roughly 1/3 the cost of Sonnet and 1/15 the cost of Opus. Tether uses Haiku for everything. The expensive worker (Claude Code) does the creative work; the cheap watcher (Haiku) does the structured checking.</p>
+
+<div class="callout-blue">
+<strong>Cost numbers to keep in mind.</strong> Claude Sonnet 4.6: $3/M input, $15/M output. Claude Haiku 4.5: $1/M input, $5/M output. A typical tether check should cost $0.005–0.02 depending on complexity. A typical Claude Code turn costs $0.05–0.15. Tether's overhead per session should land around 15–25% of the worker's cost. Higher than a simple drift watcher would be, because impact analysis and edge case generation are richer operations — but still cheap enough that the math works.
+</div>
+
+<p>The hard rule: <strong>the watcher model must be Haiku or equivalent, never Sonnet or Opus.</strong> If you find yourself reaching for the big model in tether's path, stop and reconsider. You are breaking the economics.</p>
+
+<h2>3. The two pillars: impact analysis &amp; edge case generation</h2>
+
+<p>Tether does two things that no existing tool does. Both are powered by the feature ledger (Section 4) and the cheap watcher.</p>
+
+<h3>Pillar 1: Impact analysis</h3>
+
+<p>Before Claude Code makes a change, tether answers the question: <strong>"what else in this codebase will be affected by this change, and how badly?"</strong></p>
+
+<p>The mechanism: every feature in the ledger is tagged with the files it lives in. When Claude Code is about to modify file X, tether looks up which features list X in their <code>files</code> array. Those features are the <em>blast radius</em>. Tether then asks Haiku to analyze the planned change against each affected feature and return:</p>
+
+<ul>
+  <li><strong>Risk level</strong> per feature: <code>none</code>, <code>low</code>, <code>medium</code>, <code>high</code></li>
+  <li><strong>Reasoning</strong>: one sentence per feature explaining why</li>
+  <li><strong>Suggested mitigations</strong> for medium/high risks</li>
+</ul>
+
+<p>The output gets written to a file Claude Code reads on its next turn. If any risk is medium or high, Claude Code is instructed (via CLAUDE.md) to <strong>ask the user before proceeding</strong>. This is the proactive intervention — drift is prevented, not caught after the fact.</p>
+
+<p>Example interaction:</p>
+
+<pre><code>User: "Add caching to the rate limiter for performance."
+
+Claude Code: [reads ledger, sees rate limiter in f2 and middleware in f5]
+            [calls tether plan src/ratelimiter.py]
+
+Tether → Haiku: "User wants to add caching to ratelimiter.py. Affected
+                features: f2 (rate limiting), f5 (request middleware),
+                f8 (admin override). What's the risk to each?"
+
+Haiku → Tether: f2: medium — caching may bypass per-user windows
+                f5: low — middleware reads ratelimiter output, behavior changes
+                f8: high — admin override depends on real-time state, caching breaks it
+
+Claude Code: "Before I add caching, I need to flag two concerns:
+              1. Medium risk to rate limiting itself — caching could bypass
+                 the per-user sliding window. How fresh do you need the data?
+              2. HIGH risk to admin override (f8) — that feature depends on
+                 real-time state. Caching will likely break it.
+
+              Should I proceed anyway, skip caching for admin paths, or
+              rethink the approach?"
+</code></pre>
+
+<p>That conversation is the entire value proposition of tether. The agent caught the problem before writing a single line of code.</p>
+
+<h3>Pillar 2: Edge case generation</h3>
+
+<p>When Claude Code is about to add a <em>new</em> feature, tether generates the edge cases that feature needs to handle, weighted by realistic frequency. Edge cases are stored on the ledger entry for that feature, so future changes to the feature can be re-validated against them.</p>
+
+<p>Frequency labels:</p>
+
+<ul>
+  <li><strong>high</strong> — occurs in &gt;1% of operations</li>
+  <li><strong>medium</strong> — 0.01%–1%</li>
+  <li><strong>low</strong> — &lt;0.01%, but a known real scenario</li>
+  <li><strong>negligible</strong> — theoretically possible but vanishingly rare</li>
+</ul>
+
+<p>Each edge case gets a <code>must_handle: true</code> flag if it's <code>high</code> or <code>medium</code>, OR if it's <code>low</code> and the rationale mentions catastrophic/security/data-loss outcomes. This rule is applied programmatically; Haiku proposes, the rule decides. Do not let the model set <code>must_handle</code> directly — it will be too generous.</p>
+
+<p>For each <code>must_handle: true</code> edge case, tether also generates a pytest test and saves it to <code>.tether/tests/feature_&lt;id&gt;/test_*.py</code>. These tests are the "regression armor" for the feature. Whenever the feature's files are touched, these tests run.</p>
+
+<h2>4. The feature ledger (central concept)</h2>
+
+<p>The ledger is the most important single concept in tether. It is a YAML file at <code>.tether/ledger.yaml</code> that serves as the project's source of truth for:</p>
+
+<ul>
+  <li>What features exist</li>
+  <li>What status each feature is in (<code>active</code>, <code>building</code>, <code>removing</code>, <code>deprecated</code>)</li>
+  <li>Which files each feature lives in</li>
+  <li>What edge cases each feature must handle</li>
+  <li>The history of when each feature was added, modified, or removed, and why</li>
+</ul>
+
+<p>The ledger is jointly maintained by the user and Claude Code. Tether enforces that <strong>changes to the ledger happen before changes to the code</strong>. The ledger is the contract; the code follows.</p>
+
+<h3>Schema</h3>
+
+<pre><code># .tether/ledger.yaml
+version: 4                                # incremented on every change
+last_updated: 2026-04-11T09:30:14Z
+features:
+  - id: f1
+    name: "Per-user rate limiting"
+    description: "100 req/min per user, sliding window"
+    status: active                        # active|building|removing|deprecated
+    files:
+      - src/ratelimiter.py
+      - src/middleware.py
+    edge_cases:
+      - id: e1
+        description: "User exceeds limit within window"
+        frequency: high
+        must_handle: true
+        test_file: .tether/tests/feature_f1/test_exceeds_limit.py
+      - id: e2
+        description: "User's first request"
+        frequency: high
+        must_handle: true
+        test_file: .tether/tests/feature_f1/test_first_request.py
+      - id: e3
+        description: "Clock skew between servers"
+        frequency: low
+        must_handle: true                 # low + catastrophic = must_handle
+        test_file: .tether/tests/feature_f1/test_clock_skew.py
+    history:
+      - action: added
+        at: 2026-03-15T10:00:00Z
+        reason: "Initial implementation"
+
+  - id: f8
+    name: "Admin rate limit override"
+    description: "Admins bypass rate limits via JWT claim"
+    status: active
+    files:
+      - src/ratelimiter.py
+      - src/auth.py
+    edge_cases: [...]
+    history: [...]
+
+  - id: f12
+    name: "Redis-backed cache for user lookups"
+    status: removing
+    files:
+      - src/cache.py
+    history:
+      - action: added
+        at: 2026-03-20T14:00:00Z
+        reason: "Performance"
+      - action: marked_for_removal
+        at: 2026-04-11T09:15:00Z
+        reason: "Switching to in-memory dict for simplicity"
+</code></pre>
+
+<h3>Why this schema matters</h3>
+
+<p>Three properties make this schema work:</p>
+
+<p><strong>Files per feature.</strong> This is what enables targeted testing. When file X changes, tether queries: "which features list X in their files array?" Returns a small set (usually 1–3 features). Tether runs tests only for those features. Tests stay fast even as the project grows. Edge case: shared files (like <code>utils.py</code>) listed by 8 features will run all 8 — that's correct behavior, because a shared util change really can break 8 things.</p>
+
+<p><strong>Edge cases per feature.</strong> This is what enables ongoing regression protection. The edge cases generated when a feature was first added become the test suite that protects the feature forever. When the feature's code is touched, those tests run. If a test fails, tether knows exactly which feature is broken and which edge case it's failing on.</p>
+
+<p><strong>History per feature.</strong> This is what enables drift attribution. When something breaks, tether walks the history to figure out what recent change caused it. The history also serves as the project's memory — the user can ask <code>tether log f8</code> and get the full evolution of feature f8.</p>
+
+<h2>5. The four architectural rules</h2>
+
+<p>These rules keep tether from painting itself into a corner. Follow all four, even when they feel like overkill.</p>
+
+<h3>Rule 1: Watch the file system, not the agent</h3>
+
+<p>Tether must never integrate with Claude Code's internals or hooks. It watches the project directory using <code>watchdog</code>. This is the universal interface — every coding agent edits files, so tether automatically works with any agent (Codex, Gemini CLI, Aider, Cursor) later, with zero per-agent integration code.</p>
+
+<p>Resist the temptation to use Claude Code's hooks system. Hooks would let you block bad edits before they happen, but they tie tether to Claude Code specifically. v0.1 sticks to "watch and analyze and report" — strictly observational interventions delivered through the notes file mechanism.</p>
+
+<h3>Rule 2: All file paths and integration points are configurable</h3>
+
+<p>Anywhere tether writes to <code>CLAUDE.md</code>, it instead writes to <code>config.notes_file</code>. Anywhere it reads tests from <code>.tether/tests/</code>, it instead reads from <code>config.tests_dir</code>. v0.1 has hardcoded defaults; the config indirection just exists for v0.2 onward when other agents need different defaults.</p>
+
+<h3>Rule 3: The watcher model is behind a small interface</h3>
+
+<p>Do not call the Anthropic SDK directly from tether's logic. Define a tiny interface — <code>WatcherModel</code> with one method, <code>check(system, user, schema) -&gt; dict</code> — and put one implementation behind it (the Haiku-backed one). When someone later wants to swap in Gemini Flash or local Ollama, it's a 30-line addition, not a refactor.</p>
+
+<pre><code># tether/watcher_models/base.py
+from typing import Protocol
+
+class WatcherModel(Protocol):
+    def check(self, system: str, user: str, schema: dict | None = None) -&gt; dict:
+        """Run a single watcher check. Return a structured verdict."""
+        ...
+</code></pre>
+
+<h3>Rule 4: No Claude-Code-specific features in v0.1</h3>
+
+<p>No hook integration, no parsing of Claude Code's internal state, no scraping of its terminal output. Every feature must work via the universal "read ledger / watch files / write notes" pattern. This is what keeps tether buildable as universal infrastructure later.</p>
+
+<h2>6. v0.1 scope</h2>
+
+<p>v0.1 is intentionally ambitious. Both pillars (impact analysis and edge case generation), feature ledger, four phases (bootstrap, plan, watch, verify), Claude Code integration via CLAUDE.md. This is a real project, not a weekend sketch.</p>
+
+<p><strong>In scope:</strong></p>
+
+<ul>
+  <li>Feature ledger with full schema and versioning</li>
+  <li>CLI: <code>tether init</code>, <code>tether bootstrap</code>, <code>tether plan</code>, <code>tether watch</code>, <code>tether verify</code>, <code>tether ledger</code>, <code>tether log</code>, <code>tether status</code>, <code>tether report</code></li>
+  <li>Bootstrap phase: scans existing codebase, proposes initial ledger, user reviews</li>
+  <li>Plan phase: takes a planned change, returns impact analysis (which features at what risk) and (for new features) edge case enumeration</li>
+  <li>Watch phase: file watcher, targeted test runs by affected features, intent check, drift notes</li>
+  <li>Verify phase: post-change, re-runs all affected feature tests, updates ledger, writes session summary</li>
+  <li>Auto-generated CLAUDE.md instructions that teach the agent how to interact with tether</li>
+  <li>Anthropic Haiku as the default watcher model</li>
+  <li>Reproducibility: every session writes a JSONL log of every model call with cost tracking</li>
+  <li>Default: Python projects (tree-sitter Python parser)</li>
+</ul>
+
+<p><strong>Out of scope (v0.2+):</strong></p>
+
+<ul>
+  <li>Other agents (Codex, Gemini CLI, Aider) — architecture supports it, no implementation</li>
+  <li>Other watcher models — interface supports it, no implementation</li>
+  <li>JS/TS/Go/Rust — Python only in v0.1</li>
+  <li>Hook-based blocking interventions</li>
+  <li>Web dashboard / HTML reports</li>
+  <li>Multi-repo / monorepo features beyond a single project root</li>
+</ul>
+
+<div class="callout-red">
+<strong>Scope discipline.</strong> This is already a large project. Resist adding anything not on the in-scope list. If you find yourself thinking "I should also add X for completeness," write it in <code>TODO.md</code> and keep going. The biggest risk is overscoping, not technical difficulty.
+</div>
+
+<h2>7. Tech stack &amp; dependencies</h2>
+
+<p>Python 3.11+. Choices are deliberate.</p>
+
+<table>
+<tr><th>Component</th><th>Library</th><th>Why</th></tr>
+<tr><td>CLI framework</td><td><code>click</code></td><td>Mature, simple, great for nested commands</td></tr>
+<tr><td>File watcher</td><td><code>watchdog</code></td><td>Cross-platform, battle-tested</td></tr>
+<tr><td>Config &amp; ledger files</td><td><code>pyyaml</code> + <code>pydantic</code> v2</td><td>YAML for humans, pydantic for validation</td></tr>
+<tr><td>Anthropic API</td><td><code>anthropic</code> (official SDK)</td><td>For Haiku watcher calls</td></tr>
+<tr><td>Code parsing</td><td><code>tree-sitter</code> + <code>tree-sitter-python</code></td><td>For static analysis: function signatures, file → symbol map</td></tr>
+<tr><td>Test runner</td><td><code>pytest</code> (subprocess)</td><td>For feature tests</td></tr>
+<tr><td>Diffs</td><td>stdlib <code>difflib</code></td><td>Sufficient</td></tr>
+<tr><td>CLI output</td><td><code>rich</code></td><td>Pretty status displays</td></tr>
+<tr><td>Packaging</td><td><code>uv</code> + <code>pyproject.toml</code></td><td>Modern, fast</td></tr>
+</table>
+
+<p>No web framework. No database. No async unless genuinely needed (it isn't). Keep dependencies small.</p>
+
+<h2>8. Project structure</h2>
+
+<pre><code>tether/
+├── pyproject.toml
+├── README.md
+├── LICENSE                          # MIT
+├── .gitignore
+├── src/
+│   └── tether/
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── config.py
+│       ├── ledger/
+│       │   ├── __init__.py
+│       │   ├── schema.py            # pydantic models
+│       │   ├── store.py             # read/write/version ledger.yaml
+│       │   └── queries.py           # "which features touch file X?"
+│       ├── bootstrap/
+│       │   ├── __init__.py
+│       │   ├── scanner.py           # walks codebase to propose features
+│       │   └── reviewer.py          # opens editor, validates result
+│       ├── plan/
+│       │   ├── __init__.py
+│       │   ├── impact.py            # impact analysis
+│       │   ├── edge_cases.py        # edge case generation for new features
+│       │   └── notes.py             # writes plan output
+│       ├── watch/
+│       │   ├── __init__.py
+│       │   ├── runner.py            # main loop
+│       │   ├── debounce.py
+│       │   └── checks/
+│       │       ├── __init__.py
+│       │       ├── targeted_tests.py  # tests for affected features only
+│       │       ├── intent.py          # Haiku-based intent check
+│       │       └── invariants.py      # static signature/export checks
+│       ├── verify/
+│       │   ├── __init__.py
+│       │   └── verifier.py
+│       ├── attribution/
+│       │   ├── __init__.py
+│       │   └── attributor.py
+│       ├── whisper/
+│       │   ├── __init__.py
+│       │   └── notes_writer.py
+│       ├── watcher_models/
+│       │   ├── __init__.py
+│       │   ├── base.py
+│       │   └── anthropic_haiku.py
+│       ├── prompts/
+│       │   ├── __init__.py
+│       │   └── templates.py
+│       └── state/
+│           ├── __init__.py
+│           ├── manifest.py
+│           └── store.py
+└── tests/
+    ├── __init__.py
+    ├── test_ledger.py
+    ├── test_bootstrap.py
+    ├── test_impact.py
+    ├── test_edge_cases.py
+    ├── test_watch.py
+    └── fixtures/
+        └── sample_project/
+</code></pre>
+
+<h2>9. Configuration schema</h2>
+
+<pre><code># .tether/config.yaml
+project:
+  name: my-project
+  root: .
+  language: python                       # only python in v0.1
+
+watcher:
+  provider: anthropic
+  model: claude-haiku-4-5
+  budget_usd_per_session: 5.00
+
+worker:
+  agent: claude_code
+  notes_file: CLAUDE.md
+  plan_notes_file: .tether/PLAN.md       # where impact analysis goes
+  drift_notes_file: .tether/DRIFT.md     # where drift notes go
+
+ledger:
+  path: .tether/ledger.yaml
+  history_dir: .tether/ledger.history/
+  tests_dir: .tether/tests/
+
+watch:
+  debounce_ms: 800
+  preserve_globs: []
+  ignore_globs:
+    - "**/__pycache__/**"
+    - "**/.git/**"
+    - ".tether/**"
+    - "**/node_modules/**"
+
+plan:
+  impact_analysis: true
+  edge_case_generation: true
+  edge_case_count: 12
+  ask_threshold: medium                  # ask user if any risk &gt;= this
+
+verify:
+  run_all_affected_tests: true
+  max_test_runtime_seconds: 30
+</code></pre>
+
+<h2>10. Phase 1 — Bootstrap (one-time)</h2>
+
+<p>Bootstrap runs once per project via <code>tether bootstrap</code>. It builds the initial feature ledger by scanning the existing codebase. This is the only phase that operates without an existing ledger.</p>
+
+<h3>Step 1.1 — Static scan</h3>
+
+<p>Walk all <code>.py</code> files in the project root. For each file, use tree-sitter to extract:</p>
+
+<ul>
+  <li>Top-level functions and their signatures</li>
+  <li>Top-level classes and their public methods</li>
+  <li>Module-level docstring (if present)</li>
+  <li>File path → symbol map</li>
+</ul>
+
+<p>This is pure static analysis, no LLM calls. Output: an in-memory representation of the codebase structure.</p>
+
+<h3>Step 1.2 — Feature proposal (LLM)</h3>
+
+<p>Send the static scan to Haiku in chunks (one chunk per directory or per ~3000 lines of code) with the <code>BOOTSTRAP_FEATURE_PROPOSAL</code> prompt. Haiku proposes feature definitions: name, description, files, and a guess at edge cases.</p>
+
+<p>Aggregate the proposals across chunks. De-duplicate by name similarity. The result is a draft ledger.</p>
+
+<h3>Step 1.3 — User review (mandatory)</h3>
+
+<p>Open the draft ledger in <code>$EDITOR</code>. Print clear instructions: "These are tether's guesses about your project's features. Edit freely. Delete features that don't make sense. Merge duplicates. Add features tether missed. The accuracy of everything tether does later depends on this ledger being correct."</p>
+
+<p>After save, validate the YAML and write the final <code>.tether/ledger.yaml</code>. Create version 1 in <code>.tether/ledger.history/v1.yaml</code>.</p>
+
+<h3>Step 1.4 — Edge case backfill</h3>
+
+<p>For each feature in the reviewed ledger, run edge case generation (Phase 2's edge_cases logic) to populate the <code>edge_cases</code> array. Generate the corresponding pytest test files in <code>.tether/tests/feature_&lt;id&gt;/</code>.</p>
+
+<p>This is the slowest part of bootstrap — one Haiku call per feature for edge cases, plus another for each test. For a 20-feature project, expect ~80 Haiku calls and roughly $0.50–1.00 in cost. Show a progress bar.</p>
+
+<h2>11. Phase 2 — Plan (per change)</h2>
+
+<p>Plan runs every time Claude Code is about to make a significant change. The agent calls <code>tether plan &lt;file_path&gt; --intent "&lt;description of planned change&gt;"</code> and tether returns a structured analysis written to <code>.tether/PLAN.md</code>, which Claude Code then reads on its next turn.</p>
+
+<h3>Step 2.1 — Identify affected features</h3>
+
+<p>Query the ledger: which features list <code>file_path</code> in their <code>files</code> array? Return them as the <em>affected feature set</em>.</p>
+
+<h3>Step 2.2 — Impact analysis</h3>
+
+<p>For the affected features, send a single Haiku call with the <code>IMPACT_ANALYSIS</code> prompt: the planned change description, the file path, the affected features (with their descriptions and edge cases), and the recent diff if available. Haiku returns:</p>
+
+<pre><code>{
+  "risks": [
+    {"feature_id": "f2", "level": "medium", "reason": "...", "mitigation": "..."},
+    {"feature_id": "f5", "level": "low", "reason": "...", "mitigation": null},
+    {"feature_id": "f8", "level": "high", "reason": "...", "mitigation": "..."}
+  ],
+  "overall_risk": "high"
+}
+</code></pre>
+
+<p><code>ask_user_required</code> is computed by tether (not Haiku) using the rule: <code>any risk level &gt;= config.plan.ask_threshold</code>.</p>
+
+<h3>Step 2.3 — Edge case generation (only for new features)</h3>
+
+<p>If the intent describes adding a <em>new</em> feature (not modifying an existing one), also run edge case generation. Same logic as bootstrap step 1.4. Output gets included in the plan notes.</p>
+
+<h3>Step 2.4 — Write plan notes</h3>
+
+<p>Write the structured analysis to <code>.tether/PLAN.md</code> in markdown. If <code>ask_user_required</code> is true, include a clear "STOP — ask the user about these risks before proceeding" header. Otherwise, format it as advisory information for Claude Code to consider.</p>
+
+<p>Example PLAN.md output:</p>
+
+<pre><code># Tether Plan — 2026-04-11 09:32:14
+
+**Planned change:** Add caching layer to ratelimiter.py for performance
+**Affected file:** src/ratelimiter.py
+
+## ⚠️ STOP — Ask user about these risks before proceeding
+
+### High risk: f8 (Admin rate limit override)
+The admin override depends on real-time rate limit state. Adding a
+cache layer will likely break it because cached values won't reflect
+real-time admin grants.
+
+**Mitigation:** Skip caching for admin code paths, or invalidate cache
+on admin override events.
+
+### Medium risk: f2 (Per-user rate limiting)
+Caching may bypass the per-user sliding window logic if cache TTL
+exceeds the window size.
+
+**Mitigation:** Set cache TTL strictly less than the rate limit window.
+
+### Low risk: f5 (Request middleware)
+Middleware reads rate limiter output. Behavior may shift if cached
+values are stale.
+
+## Decision required
+
+Before proceeding, please ask the user:
+1. Should caching apply to admin paths, or skip them?
+2. What freshness requirement do you have for rate limit data?
+</code></pre>
+
+<h2>12. Phase 3 — Watch (continuous)</h2>
+
+<p>Watch is the long-running process started by <code>tether watch</code>. It uses <code>watchdog</code> to monitor the project, runs targeted checks on every file change, and writes drift notes when something breaks.</p>
+
+<h3>Step 3.1 — File event handling</h3>
+
+<p>Standard <code>watchdog</code> setup. Filter through <code>ignore_globs</code>, file extension whitelist (<code>.py</code>, <code>.md</code>, <code>.yaml</code>, <code>.toml</code>, <code>.json</code>), and per-path debouncer (<code>debounce_ms</code>).</p>
+
+<h3>Step 3.2 — Targeted test run</h3>
+
+<p>When a file change fires, query the ledger: which features touch this file? For each affected feature, run the tests in <code>.tether/tests/feature_&lt;id&gt;/</code>. Compare results against the previous run for that feature. Flag any newly-failing tests.</p>
+
+<p>This is what makes tether fast even on large projects. You're not running the whole test suite — you're running ~5–20 tests for ~1–3 features. Expect under 10 seconds total.</p>
+
+<h3>Step 3.3 — Intent check</h3>
+
+<p>Compute a unified diff of the changed file. Send to Haiku with the affected features (from the ledger) and ask: "does this diff align with the current state of these features?" Possible verdicts: <code>aligned</code>, <code>neutral</code>, <code>drifted</code>, <code>looks_intentional</code>.</p>
+
+<p><code>looks_intentional</code> is for the deliberate-removal case: the diff broke a test, but it looks like a clean intentional change (the user is removing a feature). Tether responds with a soft note suggesting the user update the ledger, instead of a hard "you broke this" alarm.</p>
+
+<h3>Step 3.4 — Static invariant check</h3>
+
+<p>Re-parse the changed file with tree-sitter. Compare against the snapshot from the bootstrap. Flag if a function signature changed or an exported symbol disappeared. This is free and instant.</p>
+
+<h3>Step 3.5 — Verdict aggregation &amp; whisper</h3>
+
+<p>Combine the three checks. Severity:</p>
+
+<ul>
+  <li><strong>None</strong> — all checks pass. Silent.</li>
+  <li><strong>Soft</strong> — intent says drifted, tests still pass. Gentle note.</li>
+  <li><strong>Intentional-looking</strong> — tests broke, intent says it looks intentional. Polite "did you mean to do this? if so update the ledger."</li>
+  <li><strong>Hard</strong> — tests broke, intent didn't say intentional. Firm note: "you broke test X, which protects feature Y."</li>
+  <li><strong>Critical</strong> — multiple feature tests broke. Firm note + drift attribution.</li>
+</ul>
+
+<p>Notes are written to <code>.tether/DRIFT.md</code>, with the worker's main notes file (<code>CLAUDE.md</code>) containing a one-line pointer ("see <code>.tether/DRIFT.md</code> for current drift status"). This keeps <code>CLAUDE.md</code> clean and stable while still reaching the agent on its next turn.</p>
+
+<h3>Step 3.6 — Diff chunking for large changes</h3>
+
+<p>If a diff exceeds ~300 lines, split it by function/class boundary using tree-sitter and run the intent check on each chunk separately. Each chunk is small enough for Haiku to reason about clearly. Aggregate verdicts — if any chunk drifts, the whole change is flagged with the specific chunk called out. Cost for an 800-line change with chunking: roughly $0.012 (about 4 chunks at $0.003 each).</p>
+
+<h2>13. Phase 4 — Verify (after change)</h2>
+
+<p>Verify runs after Claude Code finishes a logical unit of work. The agent calls <code>tether verify</code>, which:</p>
+
+<ol>
+  <li>Re-runs all tests for every feature whose files were modified in this session</li>
+  <li>Re-validates the ledger schema</li>
+  <li>Updates the ledger with any status changes implied by the session (e.g., features marked <code>building</code> get re-checked for completion)</li>
+  <li>Writes a session summary to <code>.tether/reports/&lt;run_id&gt;.md</code></li>
+  <li>Snapshots the ledger to <code>.tether/ledger.history/v&lt;N+1&gt;.yaml</code></li>
+</ol>
+
+<p>The session summary includes: features modified, tests run and their results, drift events with attributions, total cost spent, ledger version delta. This is what the user reads to understand what happened in the session.</p>
+
+<h2>14. The Claude Code integration (CLAUDE.md instructions)</h2>
+
+<p>This is what makes tether actually work in practice. <code>tether init</code> writes a managed block into <code>CLAUDE.md</code> that teaches the agent how to interact with tether. The exact text:</p>
+
+<pre><code>&lt;!-- TETHER:INSTRUCTIONS START — managed by tether, do not edit by hand --&gt;
+## Tether is active in this project
+
+A tool called **tether** is helping coordinate changes in this project.
+Tether maintains a "feature ledger" at `.tether/ledger.yaml` that tracks
+every feature, its files, its edge cases, and its status. Before making
+changes, you should consult tether and follow its guidance.
+
+### Workflow rules
+
+**Before making any non-trivial code change:**
+
+1. Read `.tether/ledger.yaml` to see the current feature set.
+
+2. Run `tether plan &lt;file_path&gt; --intent "&lt;short description&gt;"` for
+   the file you're about to modify. This generates impact analysis at
+   `.tether/PLAN.md`.
+
+3. Read `.tether/PLAN.md`. If it contains "STOP — Ask user", **stop and
+   ask the user about the risks before proceeding**. Do not make the
+   change until the user has answered.
+
+4. If the change adds a new feature, the plan output will also contain
+   suggested edge cases. Implement the code to handle the ones marked
+   `must_handle: true`.
+
+**Before removing or replacing a feature:**
+
+1. Edit `.tether/ledger.yaml` to mark the feature `removing`.
+2. Then change the code.
+3. After the change, run `tether verify` to update the ledger.
+
+**Always check `.tether/DRIFT.md`** at the start of each turn. If it
+contains a drift note, the most recent change broke something. Read the
+note carefully and either fix the issue or, if the change was intentional,
+update the ledger to reflect the new reality.
+
+**After finishing a logical unit of work, run `tether verify`.** This
+re-validates everything and updates the ledger.
+
+### Why this matters
+
+Tether catches two classes of mistakes that are otherwise easy to miss:
+
+1. **Cross-feature regressions** — when a change to feature A
+   accidentally breaks feature B because they share code.
+2. **Missed edge cases** — when a new feature handles the happy path
+   but misses common edge cases.
+
+The cost of consulting tether (a few seconds per change) is much less
+than the cost of discovering these mistakes hours later.
+&lt;!-- TETHER:INSTRUCTIONS END --&gt;
+</code></pre>
+
+<p>If <code>CLAUDE.md</code> already exists, prepend the block at the top. If the markers already exist, replace contents in place. Never duplicate.</p>
+
+<h2>15. CLI surface</h2>
+
+<table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>tether init</code></td><td>Interactive setup. Creates <code>.tether/</code> directory, writes <code>config.yaml</code>, writes the instructions block into <code>CLAUDE.md</code>, adds <code>.tether/</code> to <code>.gitignore</code>.</td></tr>
+<tr><td><code>tether bootstrap</code></td><td>Scans the codebase, proposes initial ledger, opens it for user review, generates edge cases and tests for each reviewed feature.</td></tr>
+<tr><td><code>tether plan &lt;file&gt; --intent "..."</code></td><td>Runs impact analysis (and edge case generation if intent describes a new feature) for a planned change. Writes <code>.tether/PLAN.md</code>.</td></tr>
+<tr><td><code>tether watch</code></td><td>Long-running file watcher. Runs targeted tests + intent checks + static checks on every change. Writes drift notes.</td></tr>
+<tr><td><code>tether verify</code></td><td>Post-change validation. Re-runs all affected tests, updates ledger, snapshots, writes session summary.</td></tr>
+<tr><td><code>tether ledger</code></td><td>Shows the current ledger in a readable format (uses <code>rich</code> tables).</td></tr>
+<tr><td><code>tether log [feature_id]</code></td><td>Shows the history of all features (or one specific feature).</td></tr>
+<tr><td><code>tether status</code></td><td>One-shot. Current session: ID, time elapsed, files watched, checks run, drift events by severity, total cost, ledger version.</td></tr>
+<tr><td><code>tether report</code></td><td>Generates a markdown report of the most recent session. Written to <code>.tether/reports/&lt;run_id&gt;.md</code>.</td></tr>
+</table>
+
+<p>Global flags: <code>--config PATH</code>, <code>--verbose</code>, <code>--quiet</code>.</p>
+
+<h2>16. Recommended build order</h2>
+
+<p>Build in this order. Each step should leave the project in a runnable state. Do not skip ahead.</p>
+
+<ol>
+  <li><strong>Project skeleton.</strong> <code>pyproject.toml</code>, package layout, <code>cli.py</code> with all commands as stubs printing "not implemented." <code>pip install -e .</code> works, <code>tether --help</code> prints.</li>
+  <li><strong>Config.</strong> Pydantic models. <code>tether init</code> writes a working config and the CLAUDE.md instructions block. Round-trip test.</li>
+  <li><strong>Ledger schema &amp; store.</strong> Pydantic models for the ledger. Read/write/version. Validation. Pure functions, no LLM.</li>
+  <li><strong>Ledger queries.</strong> "Which features touch file X?" "What's the test directory for feature Y?" "What edge cases does feature Z have?" Pure functions over the ledger.</li>
+  <li><strong>State directory.</strong> <code>.tether/</code> creation, manifest writer, JSONL log writer with cost tracking. Session ID generation.</li>
+  <li><strong>Watcher model interface.</strong> <code>WatcherModel</code> protocol and the Haiku implementation. Tool-use response handling. Test against a sample prompt.</li>
+  <li><strong>Bootstrap — static scanner.</strong> Tree-sitter setup, walk project, extract symbols, build the file → symbol map. Pure code, no LLM.</li>
+  <li><strong>Bootstrap — feature proposal.</strong> Chunk the static scan, send to Haiku with the BOOTSTRAP prompt, aggregate, deduplicate. Write draft ledger.</li>
+  <li><strong>Bootstrap — review flow.</strong> Open ledger in <code>$EDITOR</code>, validate on save, write final ledger. Print clear instructions.</li>
+  <li><strong>Edge case generation (shared module).</strong> Given a feature, generate edge cases via Haiku with the EDGE_CASE prompt. Apply <code>must_handle</code> rule.</li>
+  <li><strong>Test generation (shared module).</strong> Given an edge case, generate a pytest test via Haiku with the TEST_GEN prompt. Write to <code>.tether/tests/feature_&lt;id&gt;/</code>. Run <code>--collect-only</code> sanity check.</li>
+  <li><strong>Bootstrap — edge case backfill.</strong> Loop over features, run edge case generation and test generation for each. Progress bar. <code>tether bootstrap</code> end-to-end works.</li>
+  <li><strong>Plan — impact analysis.</strong> Query ledger for affected features, send to Haiku with IMPACT_ANALYSIS prompt, parse risks, compute <code>ask_user_required</code>.</li>
+  <li><strong>Plan — notes writer.</strong> Format the impact analysis (and edge case enumeration if applicable) as markdown. Write to <code>.tether/PLAN.md</code>.</li>
+  <li><strong>Plan — CLI command.</strong> <code>tether plan &lt;file&gt; --intent "..."</code> end-to-end. Test against a sample project.</li>
+  <li><strong>Watch — file events &amp; debounce.</strong> Watchdog setup, glob filters, debouncer. Print events to console.</li>
+  <li><strong>Watch — ledger reload.</strong> Separate watcher on <code>.tether/ledger.yaml</code>. When it changes, snapshot and reload in-memory.</li>
+  <li><strong>Watch — targeted test runner.</strong> Given a changed file, query ledger, run tests for affected features only via pytest subprocess. Parse output, compare against last run.</li>
+  <li><strong>Watch — intent check.</strong> Compute diff, send to Haiku with INTENT_CHECK prompt, parse verdict (including <code>looks_intentional</code>). Implement diff chunking for diffs &gt;300 lines.</li>
+  <li><strong>Watch — invariant check.</strong> Re-parse changed file with tree-sitter, compare against snapshot.</li>
+  <li><strong>Watch — verdict aggregation.</strong> Combine three checks, compute severity, log to JSONL.</li>
+  <li><strong>Watch — drift notes writer.</strong> Markdown formatter for each severity level. Marker-based upsert into <code>.tether/DRIFT.md</code>.</li>
+  <li><strong>Watch end-to-end.</strong> <code>tether watch</code> runs the full pipeline. Manual test against a sample project.</li>
+  <li><strong>Verify — runner.</strong> Re-run all affected feature tests, validate ledger, snapshot, write summary. <code>tether verify</code> works.</li>
+  <li><strong>Drift attribution.</strong> History walker, attribution prompt, fix-impact prompt. Append to drift notes.</li>
+  <li><strong>Ledger CLI commands.</strong> <code>tether ledger</code> (rich table view), <code>tether log [id]</code> (history view).</li>
+  <li><strong>Status &amp; report.</strong> Read manifest, render summary. Markdown report writer.</li>
+  <li><strong>Cost tracking &amp; budget cap.</strong> Sum costs from JSONL, halt watch loop on budget exceeded, surface in status.</li>
+  <li><strong>Sample project.</strong> Build a small example Python project (e.g., a tiny FastAPI app with 4–5 features) and use it to test tether end-to-end. Document the demo flow in the README.</li>
+  <li><strong>README &amp; polish.</strong> Error handling, helpful CLI messages, README with the positioning from Section 20.</li>
+</ol>
+
+<div class="callout-green">
+<strong>Definition of done for v0.1.</strong> A user can clone the repo, install with <code>pip install -e .</code>, run <code>tether init</code> + <code>tether bootstrap</code> on a Python project, then start <code>tether watch</code> in one terminal and <code>claude</code> in another. Claude Code reads the CLAUDE.md instructions, calls <code>tether plan</code> before changes, gets impact analysis, asks the user about risks, makes the change, and the watcher catches any unintended regressions in real time. <code>tether ledger</code> shows the current state. <code>tether log f8</code> shows feature f8's history. <code>tether report</code> generates a session summary.
+</div>
+
+<h2>17. Watcher prompts (verbatim)</h2>
+
+<p>Store these as constants in <code>tether/prompts/templates.py</code>. Use the Anthropic SDK's tool-use mechanism for structured output — define a single tool per prompt that returns the expected shape, read the tool input from the response.</p>
+
+<h3>BOOTSTRAP_FEATURE_PROPOSAL</h3>
+
+<pre><code>SYSTEM = """You are analyzing an existing Python codebase to identify
+its features. You will be given a chunk of the codebase as a list of
+files with their top-level functions, classes, and module docstrings.
+
+Your job: propose a list of distinct features this code chunk implements.
+A "feature" is a meaningful piece of user-facing or system functionality
+that could be described in a single sentence (e.g. "user authentication
+via JWT", "rate limiting per IP address", "background job queue").
+
+For each proposed feature, provide:
+- name: short descriptive name
+- description: one sentence explaining what the feature does
+- files: which files in this chunk implement it
+- guessed_edge_cases: 2-4 edge cases this feature should handle
+
+Be conservative — propose distinct features, not every function. Group
+related functions into one feature. If you're not sure something is a
+feature, leave it out — the user will add missing features in review.
+
+Return using the propose_features tool."""
+
+USER_TEMPLATE = """Code chunk ({chunk_index} of {total_chunks}):
+
+{static_scan_yaml}
+
+Propose features."""
+</code></pre>
+
+<h3>EDGE_CASE_ENUMERATION</h3>
+
+<pre><code>SYSTEM = """You are an experienced engineer enumerating edge cases for
+a software feature. Given a feature description, list edge cases the
+implementation must handle, and for each one estimate how often it will
+occur in realistic production traffic.
+
+Frequency labels:
+- high: occurs in &gt;1% of operations
+- medium: 0.01%–1%
+- low: &lt;0.01% but a known real scenario
+- negligible: theoretically possible but vanishingly rare
+
+For each edge case, provide a one-sentence rationale. If the case is
+rare but catastrophic (data loss, security breach, system crash), say
+so explicitly in the rationale.
+
+Aim for {count} edge cases. Prefer realistic, common cases over exotic
+ones.
+
+Return using the enumerate_edge_cases tool."""
+
+USER_TEMPLATE = """Feature: {feature_name}
+Description: {feature_description}
+Files: {feature_files}
+
+Project: {project_name}
+
+Enumerate up to {count} edge cases."""
+</code></pre>
+
+<h3>TEST_GENERATION</h3>
+
+<pre><code>SYSTEM = """You are writing a single pytest test for one specific edge
+case of a specific feature. The test must:
+
+- Be a single function named test_&lt;descriptive_snake_case&gt;
+- Be self-contained: no network, no database, no external services
+- Run in under 1 second
+- Test exactly one edge case
+- Use only stdlib and pytest, unless the project clearly exposes a
+  public API you can import
+- If the code being tested doesn't yet exist, mark with
+  @pytest.mark.skip(reason="awaiting implementation") and write the
+  test against the expected interface
+
+Return only the Python source for the test (and any imports). No
+explanations, no markdown fences."""
+
+USER_TEMPLATE = """Feature: {feature_name}
+Edge case: {edge_case_description}
+Frequency rationale: {edge_case_rationale}
+Files implementing this feature: {feature_files}
+
+Project root structure:
+{project_tree}
+
+Write the pytest test."""
+</code></pre>
+
+<h3>IMPACT_ANALYSIS</h3>
+
+<pre><code>SYSTEM = """You are analyzing the potential impact of a planned code
+change on existing features in a project. You will be given:
+
+- The file that will be changed
+- A description of the planned change
+- A list of features whose code touches that file (the "affected set")
+
+For each affected feature, decide a risk level:
+- none: this feature is not meaningfully affected
+- low: feature behavior could shift slightly but is unlikely to break
+- medium: there's a real chance the change breaks an aspect of this feature
+- high: the change is very likely to break this feature unless mitigated
+
+For each risk level &gt;= medium, also propose a mitigation: a specific,
+concrete suggestion for how to make the change without breaking the
+feature.
+
+Return using the analyze_impact tool."""
+
+USER_TEMPLATE = """File to be changed: {file_path}
+Planned change: {intent}
+
+Recent diff (if any):
+{diff}
+
+Affected features:
+{affected_features_yaml}
+
+Analyze the impact."""
+</code></pre>
+
+<h3>INTENT_CHECK</h3>
+
+<pre><code>SYSTEM = """You are checking whether a single file change aligns with
+the project's current feature ledger. You will be given:
+
+- A unified diff of the change
+- A list of features whose code touches the changed file
+- Whether any of those features' tests are now failing
+
+Decide one of:
+- aligned: the change clearly improves or maintains an existing feature
+- neutral: the change is cosmetic, refactoring, or unrelated to features
+- drifted: the change appears to break or contradict a feature's intent
+- looks_intentional: a feature's tests are now failing, BUT the change
+  looks like a clean deliberate removal or replacement (e.g. function
+  cleanly deleted with imports removed). Use this when the change feels
+  purposeful rather than accidental, even though it broke something.
+  This signals the user is changing direction and the ledger needs an
+  update.
+
+Be specific in your reason. Reference feature IDs (e.g. f3, f8) when
+drift is detected. Be conservative on `drifted` — refactors are usually
+neutral. Be generous on `looks_intentional` — if a test broke and the
+change looks tidy and purposeful, it's much more likely deliberate
+than accidental.
+
+Return using the intent_verdict tool."""
+
+USER_TEMPLATE = """File: {file_path}
+
+Diff:
+```
+{diff}
+```
+
+Features touching this file:
+{features_yaml}
+
+Failing tests (if any):
+{failing_tests}
+
+Verdict?"""
+</code></pre>
+
+<h3>DRIFT_ATTRIBUTION</h3>
+
+<pre><code>SYSTEM = """You are diagnosing why a coding agent made a change that
+broke a previously-working test for a feature. You will be given:
+
+- The breaking change (diff)
+- The feature whose test broke
+- Recent instructions the user gave
+- Recent ledger amendments
+
+Identify the single most likely source of this change. Confidence:
+- high: a recent instruction directly asked for something that would
+  cause this change
+- medium: an instruction is consistent with this change
+- low: no clear source; the agent appears to have drifted on its own
+
+Return using the attribute_drift tool."""
+
+USER_TEMPLATE = """Breaking change in {file_path}:
+```
+{diff}
+```
+
+Broken feature: {feature_id} - {feature_name}
+Failing test: {test_name}
+
+Recent user instructions:
+{recent_instructions}
+
+Recent ledger amendments:
+{recent_amendments}
+
+What is the most likely source?"""
+</code></pre>
+
+<h2>18. Competitive landscape</h2>
+
+<p>Important context: tether is in a clear gap. The Claude Code guardrail ecosystem as of now is almost entirely focused on <em>security</em>, not on <em>intent or impact</em>. Knowing this is useful both for positioning and for not accidentally re-building something that already exists.</p>
+
+<p><strong>What exists:</strong></p>
+
+<ul>
+  <li><strong>Built-in Claude Code permissions</strong> — bash command approval, sandbox mode, deny-list paths. Reactive, focused on "don't let it delete my home directory."</li>
+  <li><strong>Hooks-based security tools</strong> — Rulebricks, Codacy Guardrails, dwarvesf/claude-guardrails, NextWork. All variations on "block dangerous bash commands" and "scan files for vulnerabilities or secrets after edits."</li>
+  <li><strong>Linters and formatters</strong> — run via PostToolUse hooks. Catch style issues and obvious bugs.</li>
+</ul>
+
+<p><strong>What does not exist:</strong></p>
+
+<ul>
+  <li><strong>Cross-feature impact analysis</strong> — predicting which other features get hit by a change before the change is made.</li>
+  <li><strong>Proactive edge case generation</strong> — telling the agent what edge cases the feature it's about to add needs to handle.</li>
+  <li><strong>A persistent feature ledger</strong> — a structured, agent-readable source of truth for what features exist in a project.</li>
+  <li><strong>Intent-level drift detection</strong> — catching "the agent stopped doing what the user asked for" as opposed to "the agent ran a dangerous command."</li>
+</ul>
+
+<p>Tether occupies the second category entirely. Position the README accordingly: <em>"Codacy catches insecure code. Linters catch broken code. Tether catches off-task code and unintended regressions."</em></p>
+
+<p>One blog post (sshh.io, "How I Use Every Claude Code Feature") makes the case explicitly that block-at-write hooks are bad UX because they confuse the agent mid-plan. Tether's "watch and write notes for the next turn" approach aligns with this philosophy.</p>
+
+<h2>19. Known limitations</h2>
+
+<p>Be honest about these in the README.</p>
+
+<ul>
+  <li><strong>Edge case frequency estimation is approximate.</strong> Haiku will sometimes mis-rank. The user-review step in bootstrap is the mitigation.</li>
+  <li><strong>Impact analysis is heuristic, not provable.</strong> Haiku is doing pattern-matching, not formal program analysis. It will occasionally miss real impacts and occasionally flag false positives. The "ask the user" step is the safety net.</li>
+  <li><strong>Bootstrap quality depends on user review.</strong> If the user rubber-stamps the bootstrap-proposed ledger without editing, the ledger will be wrong, and everything downstream will be less useful. The CLI must make this clear.</li>
+  <li><strong>No protection against catastrophic destructive operations.</strong> Tether watches and warns; it does not block. If the agent runs <code>rm -rf</code>, tether finds out after the fact. Users who need destructive-operation protection should pair tether with security guardrails like Rulebricks or Claude Code's built-in permissions.</li>
+  <li><strong>Python projects only.</strong> Tree-sitter and pytest assumptions are Python-specific. Other languages are v0.2+.</li>
+  <li><strong>Single-repo only.</strong> Monorepo support is v0.2+.</li>
+  <li><strong>Non-determinism.</strong> Two runs of the watcher on the same change may return slightly different verdicts. Inherent to LLM checking.</li>
+  <li><strong>Cost is higher than simple drift detection.</strong> Expect 15–25% overhead vs. unguarded Claude Code sessions. The richness of impact analysis costs more than passive watching. Worth it, but be transparent.</li>
+</ul>
+
+<h2>20. README &amp; positioning</h2>
+
+<p>Tether's README is the launch surface. Lead with the tagline.</p>
+
+<p><strong>Tagline:</strong> "An impact-analysis and edge-case engine for coding agents. Stops Claude Code from accidentally breaking feature B while fixing feature A."</p>
+
+<p><strong>Structure:</strong></p>
+
+<ol>
+  <li><strong>One-paragraph pitch.</strong> The pain (cross-feature regressions, missed edge cases) → the solution (impact analysis + edge case generation) → the cost (15–25% overhead, prevents the much larger cost of regression discovery hours later).</li>
+  <li><strong>A short demo GIF or asciinema.</strong> Show: user asks Claude Code to add a feature → Claude Code calls <code>tether plan</code> → impact analysis appears → Claude Code asks the user about a high-risk impact → user clarifies → change happens cleanly. This is the single most important marketing asset. Record it once v0.1 works.</li>
+  <li><strong>Install:</strong> <code>pip install tether-engine</code> (or whatever PyPI name).</li>
+  <li><strong>Quickstart:</strong> 5 commands, copy-pasteable.</li>
+  <li><strong>How it works:</strong> the four phases (bootstrap, plan, watch, verify) with one paragraph each.</li>
+  <li><strong>Cost section:</strong> explicit numbers. Users want to know what it'll cost before installing.</li>
+  <li><strong>What it isn't:</strong> not a security tool, not a linter, not a CI replacement.</li>
+  <li><strong>Roadmap:</strong> JS/TS support, other agents (Codex, Gemini), other watcher models, hook-based deep mode for Claude Code.</li>
+  <li><strong>FAQ:</strong> "Does this work with Codex?" → "Not yet, architecture supports it." "Why Haiku?" → "Because the watcher's job is structured pattern matching, and the math only works with a cheap model." "How is this different from promptfoo / DSPy / Codacy?" → "Those tools evaluate, optimize, or secure. Tether predicts impact and generates edge cases."</li>
+</ol>
+
+<p><strong>Tone:</strong> confident, specific, no hype. Numbers and code samples beat adjectives.</p>
+
+<p><strong>Where to launch:</strong> r/ClaudeAI, r/LocalLLaMA, r/MachineLearning, Hacker News (Show HN). Don't launch until the demo GIF is recorded and the README is tight.</p>
+
+<hr>
+
+<p style="color: var(--muted); font-size: 14px; text-align: center; margin-top: 48px;">
+End of build handoff. Read once more before starting. Then build it carefully, in the order specified.
+</p>
+
+</div>
+</body>
+</html>

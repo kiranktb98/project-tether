@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tether Progress So Far</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+    :root {
+      --bg: #090c0b;
+      --panel: rgba(18, 23, 21, 0.92);
+      --panel-soft: rgba(22, 28, 25, 0.84);
+      --line: rgba(244, 237, 223, 0.1);
+      --text: #f4eddf;
+      --muted: #aab2ac;
+      --gold: #d7aa52;
+      --gold-soft: #f2d9a6;
+      --green: #81c39c;
+      --amber: #e6bb65;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --content-width: 1040px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Manrope", sans-serif;
+      background:
+        radial-gradient(circle at 50% -12%, rgba(215, 170, 82, 0.16), transparent 28%),
+        linear-gradient(180deg, #14110c 0%, #0d100f 24%, var(--bg) 100%);
+    }
+
+    .page {
+      padding: 28px 16px 64px;
+    }
+
+    .shell {
+      width: min(var(--content-width), 100%);
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(16, 22, 20, 0.8);
+      color: var(--gold-soft);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .hero,
+    .section {
+      margin-top: 22px;
+    }
+
+    .hero-card,
+    .section-card {
+      padding: 32px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--panel), var(--panel-soft));
+      box-shadow: var(--shadow);
+    }
+
+    h1,
+    h2 {
+      margin: 16px 0 14px;
+      font-family: "Cormorant Garamond", serif;
+      font-weight: 600;
+      line-height: 0.94;
+      letter-spacing: -0.04em;
+    }
+
+    h1 {
+      font-size: clamp(3.1rem, 8vw, 5.6rem);
+      max-width: 10ch;
+    }
+
+    h2 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      max-width: 12ch;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1rem;
+    }
+
+    .hero-lead {
+      max-width: 64ch;
+      font-size: 1.06rem;
+    }
+
+    .stats-grid,
+    .status-grid,
+    .roadmap-grid,
+    .claims-grid {
+      display: grid;
+      gap: 18px;
+      margin-top: 26px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .status-grid,
+    .claims-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .roadmap-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stat-card,
+    .status-card,
+    .roadmap-card,
+    .claim-card {
+      padding: 22px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(10, 14, 13, 0.68);
+    }
+
+    .stat-value {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 2rem;
+      font-weight: 800;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+      margin-bottom: 14px;
+    }
+
+    .tag.live {
+      color: #dff7e7;
+      background: rgba(76, 132, 92, 0.18);
+      border-color: rgba(129, 195, 156, 0.2);
+    }
+
+    .tag.next {
+      color: #fff2d3;
+      background: rgba(154, 112, 32, 0.16);
+      border-color: rgba(230, 187, 101, 0.18);
+    }
+
+    .tag.later {
+      color: #e8ddd0;
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    .section-head {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 920px) {
+      .stats-grid,
+      .status-grid,
+      .roadmap-grid,
+      .claims-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 18px 12px 52px;
+      }
+
+      .hero-card,
+      .section-card {
+        padding: 22px;
+      }
+
+      .stats-grid,
+      .status-grid,
+      .roadmap-grid,
+      .claims-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="shell">
+      <section class="hero">
+        <div class="hero-card">
+          <span class="eyebrow">Progress So Far</span>
+          <h1>Tether is real, working, and getting closer to launch.</h1>
+          <p class="hero-lead">
+            This page is the honest snapshot: what already works, what we can say with confidence,
+            and what still needs to be built before we can make stronger public claims.
+          </p>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <span class="stat-value">0.8.0</span>
+              <p>Current version</p>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">45</span>
+              <p>Repo tests passing</p>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">33</span>
+              <p>Dogfood feature buckets verified</p>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">Yes</span>
+              <p>Confidence-gated verify flow live</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-card">
+          <div class="section-head">
+            <span class="eyebrow">Where We Are</span>
+            <h2>The current product state.</h2>
+            <p>
+              Tether already behaves like a real guardrail tool for AI coding sessions. It is not
+              formal verification, but it is a working workflow with real checks and real enforcement.
+            </p>
+          </div>
+
+          <div class="status-grid">
+            <div class="status-card">
+              <span class="tag live">Live Now</span>
+              <h3>Feature ledger and blast radius</h3>
+              <p>Tether maps features to files, tracks dependencies, and runs `plan` before changes to estimate risk.</p>
+            </div>
+
+            <div class="status-card">
+              <span class="tag live">Live Now</span>
+              <h3>Session drift and targeted checks</h3>
+              <p>`watch` can monitor edits during a session and surface drift or targeted failures instead of waiting until the end.</p>
+            </div>
+
+            <div class="status-card">
+              <span class="tag live">Live Now</span>
+              <h3>Confidence-gated verification</h3>
+              <p>`verify` checks main tests and can block session completion when high-confidence must-handle edge cases are still failing.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-card">
+          <div class="section-head">
+            <span class="eyebrow">Roadmap</span>
+            <h2>What comes next.</h2>
+            <p>
+              These are the milestones that move Tether from a strong dogfooded tool into something we
+              can talk about more boldly in public.
+            </p>
+          </div>
+
+          <div class="roadmap-grid">
+            <div class="roadmap-card">
+              <span class="tag next">Next</span>
+              <h3>Sharpen the generated edge cases</h3>
+              <ul>
+                <li>Improve signal quality of generated must-handle cases</li>
+                <li>Reduce noisy or generic test suggestions</li>
+                <li>Make first-run bootstrap outputs cleaner for new repos</li>
+              </ul>
+            </div>
+
+            <div class="roadmap-card">
+              <span class="tag next">Next</span>
+              <h3>Prove it on more real projects</h3>
+              <ul>
+                <li>Dogfood across multiple repos, not just this one</li>
+                <li>Measure how often Tether catches regressions that would otherwise slip through</li>
+                <li>Collect real examples and case studies</li>
+              </ul>
+            </div>
+
+            <div class="roadmap-card">
+              <span class="tag later">Later</span>
+              <h3>Expand beyond current scope</h3>
+              <ul>
+                <li>More language support beyond Python</li>
+                <li>Better scoring that learns from real pass/fail outcomes</li>
+                <li>Richer CI and agent integrations</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-card">
+          <div class="section-head">
+            <span class="eyebrow">Stronger Claims</span>
+            <h2>What we need before we can say more.</h2>
+            <p>
+              The right move is not to overclaim. The right move is to add the proof points that make stronger claims fair.
+            </p>
+          </div>
+
+          <div class="claims-grid">
+            <div class="claim-card">
+              <h3>To claim better accuracy</h3>
+              <ul>
+                <li>Track prediction quality over time</li>
+                <li>Store false positive and false negative rates</li>
+                <li>Benchmark Tether on known regression scenarios</li>
+              </ul>
+            </div>
+
+            <div class="claim-card">
+              <h3>To claim stronger confidence</h3>
+              <ul>
+                <li>Replace heuristic confidence-only scoring with evidence from outcomes</li>
+                <li>Show that high-confidence cases fail more often when left unchecked</li>
+                <li>Publish examples where the gate caught real misses</li>
+              </ul>
+            </div>
+
+            <div class="claim-card">
+              <h3>To claim launch readiness at scale</h3>
+              <ul>
+                <li>Onboard outside users</li>
+                <li>Document successful runs on non-demo codebases</li>
+                <li>Tighten setup, docs, and first-run experience</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

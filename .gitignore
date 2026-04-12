@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+
+# Tether runtime state (project-local, not committed)
+.tether/
+
+# Tools
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local packaging and demos
+.tmp-dist/
+tmp_demo/
+*.whl
