@@ -29,16 +29,32 @@ def run_plan(
     cfg = load_config(config_path)
     tether_dir = ensure_tether_dir(".tether")
 
-    if cfg.watcher.provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        console.print("[red]Error:[/red] ANTHROPIC_API_KEY is not set.")
+    from tether.env import check_provider_ready
+    err = check_provider_ready(cfg.watcher.provider)
+    if err:
+        console.print(f"[red]Error:[/red] {err}")
         return
+
+    # Validate the target path. Accept paths that don't yet exist (plan is
+    # often used *before* creating a new file) but warn — a typo'd path
+    # against a nonexistent file wastes a Haiku call for no impact analysis.
+    target = Path(file_path)
+    if not target.is_absolute():
+        target = Path(cfg.project.root).resolve() / file_path
+    if not target.exists():
+        console.print(
+            f"[yellow]Note:[/yellow] [cyan]{file_path}[/cyan] doesn't exist yet. "
+            "Proceeding assuming this is a new file."
+        )
 
     ledger = load_ledger(cfg.ledger.path)
     if not ledger.features:
         console.print(
-            "[yellow]Warning:[/yellow] No features in ledger. "
-            "Run [cyan]tether bootstrap[/cyan] first."
+            "[yellow]Warning:[/yellow] No features in ledger.\n"
+            "  Run [cyan]tether bootstrap[/cyan] first so impact analysis "
+            "has something to compare against."
         )
+        return
 
     event_log = EventLog(tether_dir)
     manifest = SessionManifest.load(tether_dir) or SessionManifest(tether_dir)

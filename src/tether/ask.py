@@ -76,8 +76,10 @@ def run_ask(
     cfg = load_config(config_path)
     tether_dir = ensure_tether_dir(".tether")
 
-    if cfg.watcher.provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        console.print("[red]Error:[/red] ANTHROPIC_API_KEY is not set.")
+    from tether.env import check_provider_ready
+    err = check_provider_ready(cfg.watcher.provider)
+    if err:
+        console.print(f"[red]Error:[/red] {err}")
         return
 
     ledger = load_ledger(cfg.ledger.path)

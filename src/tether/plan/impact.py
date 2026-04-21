@@ -96,23 +96,33 @@ def run_impact_analysis(
     if not affected:
         return result
 
-    # Build YAML representation of affected features for the prompt
+    # Build YAML representation of affected features for the prompt.
+    # Include must-handle edge cases with their rationale so Haiku can
+    # spot changes that invalidate a documented edge case (e.g. caching
+    # defeats a real-time-freshness requirement).
     affected_yaml = yaml.dump(
         [
             {
                 "id": f.id,
                 "name": f.name,
-                "description": f.description,
+                "description": f.description or "(no description)",
                 "files": f.files,
-                "edge_cases": [
-                    {"id": ec.id, "description": ec.description, "must_handle": ec.must_handle}
+                "must_handle_edge_cases": [
+                    {
+                        "id": ec.id,
+                        "description": ec.description,
+                        "frequency": ec.frequency.value,
+                        "rationale": ec.rationale,
+                    }
                     for ec in f.edge_cases
+                    if ec.must_handle
                 ],
             }
             for f in affected
         ],
         default_flow_style=False,
         allow_unicode=True,
+        sort_keys=False,
     )
 
     user_msg = IMPACT_USER_TEMPLATE.format(

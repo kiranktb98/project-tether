@@ -15,6 +15,7 @@ from watchdog.observers import Observer
 
 from tether.config import load_config
 from tether.ledger.store import load_ledger, save_ledger
+from tether.state.file_cache import PersistentFileCache
 from tether.state.store import EventLog, ensure_tether_dir
 from tether.state.manifest import SessionManifest
 from tether.watcher_models import create_watcher_model
@@ -28,8 +29,6 @@ from tether.whisper.notes_writer import DriftNote, clear_drift_notes, compute_se
 
 console = Console()
 
-# File content cache for computing diffs
-_file_cache: dict[str, str] = {}
 # Previous test results per feature (for newly_failing detection)
 _prev_test_results: dict[str, TestRunResult] = {}
 
@@ -44,6 +43,7 @@ class TetherEventHandler(FileSystemEventHandler):
         manifest: SessionManifest,
         debouncer: Debouncer,
         ledger_holder: list,   # mutable reference [ledger]
+        file_cache: PersistentFileCache,
         verbose: bool = False,
     ) -> None:
         super().__init__()
@@ -54,6 +54,7 @@ class TetherEventHandler(FileSystemEventHandler):
         self._manifest = manifest
         self._debouncer = debouncer
         self._ledger_holder = ledger_holder
+        self._file_cache = file_cache
         self._verbose = verbose
         self._ledger_path = str((Path.cwd() / config.ledger.path).resolve())
 
@@ -73,6 +74,28 @@ class TetherEventHandler(FileSystemEventHandler):
         self._debouncer.trigger(src, self._handle_file_change)
 
     on_created = on_modified
+
+    def on_deleted(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+        src = str(event.src_path)
+        # Drop the cache entry so a future re-creation produces a clean diff
+        # against an empty baseline rather than stale contents.
+        self._file_cache.delete(src)
+
+    def on_moved(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+        src = str(event.src_path)
+        dest = str(getattr(event, "dest_path", "") or "")
+        if not dest:
+            self._file_cache.delete(src)
+            return
+        # Carry forward the cached contents under the new path so the next
+        # edit produces a diff against the pre-rename version, not empty.
+        self._file_cache.rename(src, dest)
+        if self._should_watch(dest):
+            self._debouncer.trigger(dest, self._handle_file_change)
 
     def _should_watch(self, file_path: str) -> bool:
         """Return True if this file should trigger checks."""
@@ -108,9 +131,9 @@ class TetherEventHandler(FileSystemEventHandler):
         try:
             # Compute diff from cache
             try:
-                old_content = _file_cache.get(file_path, "")
+                old_content = self._file_cache.get(file_path, "")
                 new_content = Path(file_path).read_text(encoding="utf-8", errors="replace")
-                _file_cache[file_path] = new_content
+                self._file_cache.set(file_path, new_content)
                 diff = compute_diff(old_content, new_content, rel_path)
             except OSError:
                 diff = ""
@@ -218,8 +241,10 @@ def run_watch(config_path: str | None = None, verbose: bool = False) -> None:
     cfg = load_config(config_path)
     tether_dir = ensure_tether_dir(".tether")
 
-    if cfg.watcher.provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        console.print("[red]Error:[/red] ANTHROPIC_API_KEY is not set.")
+    from tether.env import check_provider_ready
+    err = check_provider_ready(cfg.watcher.provider)
+    if err:
+        console.print(f"[red]Error:[/red] {err}")
         return
 
     ledger = load_ledger(cfg.ledger.path)
@@ -236,19 +261,27 @@ def run_watch(config_path: str | None = None, verbose: bool = False) -> None:
 
     model = create_watcher_model(cfg, event_log=event_log, session_id=manifest.session_id)
 
-    # Snapshot all feature files at startup
+    file_cache = PersistentFileCache(tether_dir / "cache" / "files")
+
+    # Snapshot all feature files at startup. The persistent cache survives
+    # across restarts, so only overwrite the cached content when the file
+    # on disk is genuinely newer; otherwise keep the prior snapshot as the
+    # diff baseline for the next edit.
     project_root = Path(cfg.project.root).resolve()
     for feature in ledger.features:
         for fpath in feature.files:
             abs_path = project_root / fpath
             if abs_path.exists():
                 take_snapshot(abs_path, project_root)
-                try:
-                    _file_cache[str(abs_path)] = abs_path.read_text(
-                        encoding="utf-8", errors="replace"
-                    )
-                except OSError:
-                    pass
+                key = str(abs_path)
+                if not file_cache.get(key):
+                    try:
+                        file_cache.set(
+                            key,
+                            abs_path.read_text(encoding="utf-8", errors="replace"),
+                        )
+                    except OSError:
+                        pass
 
     debouncer = Debouncer(delay_ms=cfg.watch.debounce_ms)
     ledger_holder = [ledger]
@@ -261,6 +294,7 @@ def run_watch(config_path: str | None = None, verbose: bool = False) -> None:
         manifest=manifest,
         debouncer=debouncer,
         ledger_holder=ledger_holder,
+        file_cache=file_cache,
         verbose=verbose,
     )
 
