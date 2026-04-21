@@ -137,6 +137,14 @@ def report(ctx: click.Context) -> None:
 
 
 @cli.command()
+@click.pass_context
+def coverage(ctx: click.Context) -> None:
+    """Show the edge-case bell curve and must-handle test coverage per feature."""
+    from tether.coverage.display import show_coverage
+    show_coverage(config_path=ctx.obj["config_path"])
+
+
+@cli.command()
 @click.argument("question")
 @click.pass_context
 def ask(ctx: click.Context, question: str) -> None:

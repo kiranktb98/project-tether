@@ -43,6 +43,34 @@ class ImpactResult:
     overall_risk: str = "none"
     ask_user_required: bool = False
 
+    @property
+    def risk_distribution(self) -> dict[str, int]:
+        """Count of features at each risk level."""
+        dist: dict[str, int] = {"none": 0, "low": 0, "medium": 0, "high": 0}
+        for r in self.risks:
+            if r.level in dist:
+                dist[r.level] += 1
+        return dist
+
+    @property
+    def confidence(self) -> str:
+        """
+        Confidence in the impact prediction based on spread of risk levels.
+
+        - high   : all risks land on ≤2 adjacent levels (tight cluster)
+        - medium : risks span 3 levels
+        - low    : risks span all 4 levels (high variance — Haiku is uncertain)
+        """
+        if not self.risks:
+            return "high"
+        levels_present = {_RISK_ORDER[r.level] for r in self.risks if r.level in _RISK_ORDER}
+        span = max(levels_present) - min(levels_present)
+        if span <= 1:
+            return "high"
+        if span == 2:
+            return "medium"
+        return "low"
+
 
 def run_impact_analysis(
     file_path: str,

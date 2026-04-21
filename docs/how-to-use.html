@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tether — How to Use</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --cyan: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --orange: #e3b341;
+      --purple: #bc8cff;
+      --term-bg: #0d1117;
+      --term-border: #21262d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── layout ── */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 240px; height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0;
+    }
+    .sidebar-logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .sidebar-logo h1 { font-size: 20px; color: var(--cyan); }
+    .sidebar-logo p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .nav-section { padding: 8px 20px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .nav-link { display: block; padding: 6px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 2px solid transparent; }
+    .nav-link:hover, .nav-link.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(88,166,255,.05); }
+
+    .main { margin-left: 240px; padding: 48px 56px; max-width: 900px; }
+    section { margin-bottom: 72px; }
+
+    h2 { font-size: 24px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+    h3 { font-size: 16px; margin: 28px 0 10px; color: var(--cyan); }
+    p  { margin-bottom: 12px; color: var(--muted); }
+    strong { color: var(--text); }
+    a { color: var(--cyan); }
+    ul, ol { margin: 0 0 12px 20px; color: var(--muted); }
+    li { margin-bottom: 4px; }
+
+    /* ── hero ── */
+    .hero {
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 60%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+    .hero h1 { font-size: 36px; color: var(--cyan); margin-bottom: 8px; }
+    .hero p  { font-size: 16px; color: var(--muted); max-width: 500px; margin: 0 auto; }
+    .badge-row { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: rgba(88,166,255,.1); border: 1px solid rgba(88,166,255,.3); color: var(--cyan); }
+
+    /* ── concept cards ── */
+    .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .card-icon { font-size: 24px; margin-bottom: 8px; }
+    .card h4 { font-size: 14px; color: var(--text); margin-bottom: 6px; }
+    .card p { font-size: 13px; margin: 0; }
+
+    /* ── terminal ── */
+    .term {
+      background: var(--term-bg);
+      border: 1px solid var(--term-border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    .term-bar {
+      background: #21262d;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid var(--term-border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green  { background: #27c93f; }
+    .term-title { flex: 1; text-align: center; font-size: 11px; color: var(--muted); }
+    .term-body  { padding: 16px 20px; font-family: "SF Mono", "Fira Code", "Consolas", monospace; line-height: 1.8; white-space: pre; overflow-x: auto; }
+
+    /* ── syntax colors ── */
+    .c  { color: #8b949e; }   /* comment / muted */
+    .p  { color: #58a6ff; }   /* prompt / cyan */
+    .g  { color: #3fb950; }   /* green */
+    .y  { color: #d29922; }   /* yellow */
+    .r  { color: #f85149; }   /* red */
+    .w  { color: #e6edf3; }   /* white */
+    .o  { color: #e3b341; }   /* orange */
+    .pu { color: #bc8cff; }   /* purple */
+    .b  { font-weight: bold; }
+
+    /* ── bell curve diagram ── */
+    .bell-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .bell-row { display: flex; align-items: center; gap: 12px; margin: 6px 0; font-family: monospace; font-size: 13px; }
+    .bell-label { width: 90px; text-align: right; color: var(--muted); font-size: 12px; }
+    .bell-bar   { height: 20px; border-radius: 3px; transition: width .3s; display: flex; align-items: center; padding: 0 8px; font-size: 11px; color: rgba(255,255,255,.7); font-weight: bold; }
+    .bell-count { color: var(--muted); font-size: 12px; }
+    .bell-tag   { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+    .tag-must { background: rgba(248,81,73,.15); color: var(--red); border: 1px solid rgba(248,81,73,.3); }
+    .tag-opt  { background: rgba(139,148,158,.1); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── risk distribution ── */
+    .risk-grid { display: grid; grid-template-columns: 80px 1fr 60px 120px; gap: 6px 12px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 16px 0; font-family: monospace; font-size: 13px; }
+    .risk-label { color: var(--muted); }
+    .risk-bar   { height: 16px; border-radius: 2px; }
+    .risk-n { color: var(--green); }  .risk-bar-n  { background: var(--green); }
+    .risk-l { color: #3fb950; }       .risk-bar-l  { background: #3fb950; }
+    .risk-m { color: var(--yellow); } .risk-bar-m  { background: var(--yellow); }
+    .risk-h { color: var(--red); }    .risk-bar-h  { background: var(--red); }
+    .risk-count { font-weight: bold; }
+    .risk-note  { font-size: 11px; color: var(--muted); font-style: italic; }
+    .conf-row { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 6px; }
+
+    /* ── cmd table ── */
+    .cmd-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    .cmd-table th { text-align: left; padding: 8px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .cmd-table td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid rgba(48,54,61,.5); vertical-align: top; }
+    .cmd-table tr:last-child td { border-bottom: none; }
+    .cmd { font-family: monospace; color: var(--cyan); background: rgba(88,166,255,.08); padding: 2px 8px; border-radius: 4px; }
+    .cmd-desc { color: var(--muted); }
+
+    /* ── step badges ── */
+    .steps { counter-reset: step; }
+    .step { counter-increment: step; display: flex; gap: 20px; margin-bottom: 32px; }
+    .step-num { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; background: rgba(88,166,255,.15); border: 1px solid rgba(88,166,255,.3); color: var(--cyan); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+    .step-body h4 { font-size: 15px; color: var(--text); margin-bottom: 6px; }
+    .step-body p  { font-size: 13px; }
+
+    /* ── callout ── */
+    .callout { border-left: 3px solid; border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 16px 0; font-size: 13px; }
+    .callout-tip    { border-color: var(--green);  background: rgba(63,185,80,.07); }
+    .callout-warn   { border-color: var(--yellow); background: rgba(210,153,34,.07); }
+    .callout-stop   { border-color: var(--red);    background: rgba(248,81,73,.07);  }
+    .callout p { color: var(--muted); margin: 0; }
+    .callout strong { color: var(--text); }
+
+    /* responsive */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 24px 20px; }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>⚓ Tether</h1>
+    <p>Edge-case engine for agents</p>
+  </div>
+  <div class="nav-section">Getting started</div>
+  <a class="nav-link" href="#install">Install</a>
+  <a class="nav-link" href="#quickstart">Quickstart</a>
+  <div class="nav-section">Concepts</div>
+  <a class="nav-link" href="#bell-curve">The Bell Curve</a>
+  <a class="nav-link" href="#confidence">Confidence Intervals</a>
+  <a class="nav-link" href="#ledger">Feature Ledger</a>
+  <div class="nav-section">Commands</div>
+  <a class="nav-link" href="#cmd-init">tether init</a>
+  <a class="nav-link" href="#cmd-bootstrap">tether bootstrap</a>
+  <a class="nav-link" href="#cmd-plan">tether plan</a>
+  <a class="nav-link" href="#cmd-coverage">tether coverage</a>
+  <a class="nav-link" href="#cmd-watch">tether watch</a>
+  <a class="nav-link" href="#cmd-ask">tether ask</a>
+  <a class="nav-link" href="#cmd-verify">tether verify</a>
+  <div class="nav-section">Reference</div>
+  <a class="nav-link" href="#config">Config</a>
+  <a class="nav-link" href="#ollama">Ollama (free)</a>
+</nav>
+
+<!-- ── main ── -->
+<main class="main">
+
+  <!-- hero -->
+  <div class="hero">
+    <h1>⚓ Tether</h1>
+    <p>Impact-analysis and edge-case engine for coding agents.<br>Stops Claude Code from breaking feature B while fixing feature A.</p>
+    <div class="badge-row">
+      <span class="badge">Python 3.11+</span>
+      <span class="badge">Claude Haiku</span>
+      <span class="badge">Ollama support</span>
+      <span class="badge">MIT License</span>
+    </div>
+  </div>
+
+  <!-- ── INSTALL ── -->
+  <section id="install">
+    <h2>Install</h2>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span><span class="term-title">terminal</span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">pip install tether-engine</span>
+<span class="c"># Ollama backend (optional, for free local analysis)</span>
+<span class="p">$</span> <span class="w">pip install tether-engine[ollama]</span></div>
+    </div>
+    <p>Requires <strong>Python 3.11+</strong> and an <strong>Anthropic API key</strong> (for Haiku) — or a running <strong>Ollama</strong> server for free local mode.</p>
+  </section>
+
+  <!-- ── QUICKSTART ── -->
+  <section id="quickstart">
+    <h2>Quickstart</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Set your API key</h4>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+            <div class="term-body"><span class="p">$</span> <span class="w">echo "ANTHROPIC_API_KEY=sk-..." >> .env</span>
+<span class="c"># or: export ANTHROPIC_API_KEY=sk-...</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Initialize tether in your project</h4>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+            <div class="term-body"><span class="p">$</span> <span class="w">tether init</span>
+
+<span class="p">Tether init</span>
+
+  Project name [my-project]: <span class="w">ratelimiter</span>
+
+<span class="g">OK</span> Config written to <span class="p">.tether/config.yaml</span>
+<span class="g">OK</span> Tether instructions written to <span class="p">CLAUDE.md</span>
+<span class="c">Added .tether/ to .gitignore</span>
+
+<span class="g">Tether is ready.</span> Run <span class="p">tether bootstrap</span> to build the feature ledger.</div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Bootstrap — scan codebase, propose features, generate tests</h4>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+            <div class="term-body"><span class="p">$</span> <span class="w">tether bootstrap</span>
+
+<span class="p">tether bootstrap</span>
+
+<span class="c">Step 1/4 — Scanning codebase...</span>
+  Found <span class="p">3</span> Python files.
+<span class="c">Step 2/4 — Proposing features (Haiku)...</span>
+  Haiku proposed <span class="p">3</span> features.  Cost so far: <span class="c">$0.0037</span>
+<span class="c">Step 3/4 — User review...</span>
+<span class="c">  [editor opens with proposed feature list — edit, save, close]</span>
+<span class="c">Step 4/4 — Generating edge cases and tests...</span>
+
+<span class="g">Bootstrap complete.</span>
+  Features:      <span class="p">3</span>
+  Edge cases:    <span class="p">24</span> (<span class="p">18</span> must_handle)
+  Tests written: <span class="p">18</span>
+  Session cost:  <span class="c">$0.0821</span>
+  Ledger:        <span class="p">.tether/ledger.yaml</span> (v2)</div>
+          </div>
+          <p style="margin-top:8px">Use <code class="cmd">--yes</code> to auto-accept the proposed ledger without opening an editor.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Start the watcher in one terminal, Claude Code in another</h4>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span><span class="term-title">terminal 1 — tether watch</span></div>
+            <div class="term-body"><span class="p">$</span> <span class="w">tether watch</span>
+<span class="g">Watching</span> 3 features across 3 files. Budget: $5.00/session.
+<span class="c">Press Ctrl+C to stop.</span></div>
+          </div>
+          <div class="term" style="margin-top:8px">
+            <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span><span class="term-title">terminal 2 — claude</span></div>
+            <div class="term-body"><span class="p">$</span> <span class="w">claude</span>
+<span class="c">> Claude Code reads CLAUDE.md automatically and follows tether workflow.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── BELL CURVE ── -->
+  <section id="bell-curve">
+    <h2>The Bell Curve</h2>
+    <p>Every feature has an edge-case <strong>risk surface</strong> — the set of unusual inputs and conditions the code must handle. Tether maps this surface by assigning each edge case a <strong>frequency label</strong>:</p>
+
+    <div class="bell-diagram">
+      <div style="text-align:center; color:var(--muted); font-size:12px; margin-bottom:16px;">
+        Edge-case frequency distribution for a typical feature
+      </div>
+      <div class="bell-row">
+        <span class="bell-label" style="color:var(--muted)">HIGH &gt;1%</span>
+        <div class="bell-bar" style="width:200px; background:var(--green);">common</div>
+        <span class="bell-count">4 cases</span>
+        <span class="bell-tag tag-must">must-handle</span>
+      </div>
+      <div class="bell-row">
+        <span class="bell-label" style="color:var(--muted)">MEDIUM 0.01%</span>
+        <div class="bell-bar" style="width:300px; background:var(--yellow);">peak of the curve</div>
+        <span class="bell-count">6 cases</span>
+        <span class="bell-tag tag-must">must-handle</span>
+      </div>
+      <div class="bell-row">
+        <span class="bell-label" style="color:var(--muted)">LOW &lt;0.01%</span>
+        <div class="bell-bar" style="width:220px; background:var(--orange);">rare</div>
+        <span class="bell-count">4 cases</span>
+        <span class="bell-tag tag-opt">only if catastrophic</span>
+      </div>
+      <div class="bell-row">
+        <span class="bell-label" style="color:var(--muted)">NEGLIGIBLE</span>
+        <div class="bell-bar" style="width:60px; background:var(--muted);">tail</div>
+        <span class="bell-count">1 case</span>
+        <span class="bell-tag tag-opt">skip</span>
+      </div>
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); font-size:12px; color:var(--muted);">
+        <strong style="color:var(--text)">must-handle zone</strong> = HIGH + MEDIUM frequencies, plus any LOW case with a catastrophic rationale (data loss, security breach, system crash).
+        These are the cases tether generates test stubs for.
+      </div>
+    </div>
+
+    <p>The shape tells you about your feature's risk profile. A feature with many HIGH-frequency edge cases needs aggressive testing of common paths. A feature heavy in LOW/NEGLIGIBLE cases is well-understood and stable.</p>
+
+    <h3>View it with <code class="cmd">tether coverage</code></h3>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether coverage</span>
+
+<span class="c">╭──────────── tether coverage  v12  3 features · 24 edge cases ─────────────╮</span>
+<span class="c">│</span>   Must-handle coverage: <span class="g">████████████████████████░░░░░░</span>  <span class="g">82%</span>  (15/18 tested)  <span class="c">│</span>
+<span class="c">╰───────────────────────────────────────────────────────────────────────────╯</span>
+
+<span class="b">Frequency distribution (all features combined)</span>
+<span class="c">This is the shape of your edge-case risk surface.</span>
+
+  <span class="g b">HIGH      </span>  <span class="g">███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░</span>   <span class="c">7 edge cases  ← must-handle zone</span>
+  <span class="y b">MEDIUM    </span>  <span class="y">████████████████████████████████████████</span>  <span class="c">11 edge cases  ← must-handle zone</span>
+  <span class="o b">LOW       </span>  <span class="o">█████████████████████░░░░░░░░░░░░░░░░░░░</span>   <span class="c">6 edge cases</span>
+  <span class="c b">NEGLIGIBLE</span>  <span class="c">░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░</span>   <span class="c">0 edge cases</span>
+
+   <span class="c">Feature                    HIGH     MEDIUM   LOW      Coverage</span>
+  <span class="c">────────────────────────────────────────────────────────────────</span>
+   <span class="p">f1</span>  Rate Limiting           <span class="c">3</span> <span class="g">████░░░░</span>  <span class="c">4</span> <span class="y">█████░░░</span>  <span class="c">2</span> <span class="o">████░░░░</span>   <span class="g">██████  6/6</span>
+   <span class="p">f2</span>  JWT Auth                <span class="c">2</span> <span class="g">███░░░░░</span>  <span class="c">4</span> <span class="y">█████░░░</span>  <span class="c">2</span> <span class="o">████░░░░</span>   <span class="y">████░░  5/7</span>
+   <span class="p">f3</span>  Request Middleware      <span class="c">2</span> <span class="g">███░░░░░</span>  <span class="c">3</span> <span class="y">████░░░░</span>  <span class="c">2</span> <span class="o">████░░░░</span>   <span class="r">██░░░░  4/5</span></div>
+    </div>
+  </section>
+
+  <!-- ── CONFIDENCE ── -->
+  <section id="confidence">
+    <h2>Confidence Intervals</h2>
+    <p>When you run <code class="cmd">tether plan</code>, Haiku assesses the risk level for every feature that touches the file you're about to change. The <strong>confidence</strong> tells you how much to trust that assessment.</p>
+
+    <p>Confidence is computed from the <strong>spread</strong> of individual feature risk levels:</p>
+
+    <div class="card-grid">
+      <div class="card" style="border-color:rgba(63,185,80,.3)">
+        <div class="card-icon">🎯</div>
+        <h4 style="color:var(--green)">High confidence</h4>
+        <p>All features landed on the same (or adjacent) risk level. Haiku's assessment is reliable — act on it.</p>
+        <p style="margin-top:8px; font-family:monospace; font-size:12px; color:var(--muted)">span ≤ 1 level → high</p>
+      </div>
+      <div class="card" style="border-color:rgba(210,153,34,.3)">
+        <div class="card-icon">⚠️</div>
+        <h4 style="color:var(--yellow)">Medium confidence</h4>
+        <p>Risks span 2 levels (e.g. none → medium). Review PLAN.md carefully before proceeding.</p>
+        <p style="margin-top:8px; font-family:monospace; font-size:12px; color:var(--muted)">span = 2 levels → medium</p>
+      </div>
+      <div class="card" style="border-color:rgba(248,81,73,.3)">
+        <div class="card-icon">🔴</div>
+        <h4 style="color:var(--red)">Low confidence</h4>
+        <p>Risks span 3–4 levels (e.g. none → high). High variance — Haiku is uncertain. Read every risk note.</p>
+        <p style="margin-top:8px; font-family:monospace; font-size:12px; color:var(--muted)">span ≥ 3 levels → low</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h4>What to do with it</h4>
+        <p>Low confidence doesn't mean the change is safe — it means tether is uncertain. Treat every medium/high risk as real.</p>
+      </div>
+    </div>
+
+    <h3>What it looks like in <code class="cmd">tether plan</code></h3>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether plan src/ratelimiter.py --intent "add Redis caching"</span>
+
+<span class="c">Analyzing impact of change to src/ratelimiter.py...</span>
+<span class="g">Plan written to .tether/PLAN.md</span>
+
+  <span class="b">Risk spread</span>  <span class="c">(3 features analyzed)</span>
+
+  <span class="g b">  none  </span>  <span class="g">██████████░░░░░░░░░░</span>  <span class="g">1</span>
+  <span class="g b">  low   </span>  <span class="g">░░░░░░░░░░░░░░░░░░░░</span>  <span class="c">0</span>
+  <span class="y b"> medium </span>  <span class="y">████████████████████</span>  <span class="y">1</span>  <span class="c i">← ask threshold</span>
+  <span class="r b">  high  </span>  <span class="r">████████████████████</span>  <span class="r">1</span>  <span class="c i">← STOP</span>
+
+  Confidence: <span class="r b">low</span>  <span class="c">high variance — Haiku is uncertain, review PLAN.md carefully</span>
+
+  Cost: <span class="c">$0.0094</span>
+
+<span class="y b">STOP</span> — plan contains medium/high risks.
+Read <span class="p">.tether/PLAN.md</span> and ask the user before proceeding.</div>
+    </div>
+
+    <div class="callout callout-stop">
+      <p><strong>When you see STOP:</strong> Claude Code is instructed to halt and ask you before making any changes. Read <code>.tether/PLAN.md</code> — it contains the specific risks and mitigations Haiku identified.</p>
+    </div>
+  </section>
+
+  <!-- ── LEDGER ── -->
+  <section id="ledger">
+    <h2>The Feature Ledger</h2>
+    <p>The <strong>feature ledger</strong> at <code>.tether/ledger.yaml</code> is tether's source of truth. Every feature lives here with its files, edge cases, test links, and history.</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span><span class="term-title">.tether/ledger.yaml (excerpt)</span></div>
+      <div class="term-body"><span class="pu">version</span>: 12
+<span class="pu">features</span>:
+- <span class="pu">id</span>: f1
+  <span class="pu">name</span>: Per-user Rate Limiting
+  <span class="pu">description</span>: Sliding window rate limiter, 100 req/60s per user
+  <span class="pu">status</span>: active
+  <span class="pu">files</span>:
+  - src/ratelimiter.py
+  - src/middleware.py
+  <span class="pu">edge_cases</span>:
+  - <span class="pu">id</span>: e1
+    <span class="pu">description</span>: User hits the rate limit exactly at the boundary
+    <span class="pu">frequency</span>: <span class="g">high</span>
+    <span class="pu">must_handle</span>: <span class="g">true</span>
+    <span class="pu">test_file</span>: .tether/tests/feature_f1/test_boundary.py
+  - <span class="pu">id</span>: e2
+    <span class="pu">description</span>: Clock skew between server instances corrupts window
+    <span class="pu">frequency</span>: <span class="o">low</span>
+    <span class="pu">rationale</span>: Rare but catastrophic — data loss if window resets incorrectly
+    <span class="pu">must_handle</span>: <span class="g">true</span>   <span class="c"># low freq but catastrophic → escalated to must-handle</span></div>
+    </div>
+
+    <p>The <code>must_handle</code> flag is <strong>never set by the model</strong> — it's computed deterministically:</p>
+    <ul>
+      <li>HIGH or MEDIUM frequency → always <code>must_handle: true</code></li>
+      <li>LOW frequency + catastrophic rationale (data loss / security / crash) → <code>must_handle: true</code></li>
+      <li>Everything else → <code>must_handle: false</code></li>
+    </ul>
+
+    <h3>View the ledger</h3>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether ledger</span>
+
+  <span class="c">ID    Feature                     Status    Files  Edge Cases  Must-Handle</span>
+  <span class="c">─────────────────────────────────────────────────────────────────────────</span>
+  <span class="p">f1</span>    Per-user Rate Limiting       <span class="g">active</span>    2      12          8
+  <span class="p">f2</span>    JWT Authentication          <span class="g">active</span>    1      10          7
+  <span class="p">f3</span>    Request Middleware          <span class="g">active</span>    2       8          5</div>
+    </div>
+  </section>
+
+  <!-- ── CMD: INIT ── -->
+  <section id="cmd-init">
+    <h2><code class="cmd">tether init</code></h2>
+    <p>Interactive setup. Creates <code>.tether/</code>, writes <code>.tether/config.yaml</code>, and injects tether workflow rules into <code>CLAUDE.md</code>.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether init</span></div>
+    </div>
+    <p>Run once per project. Safe to re-run — it updates the CLAUDE.md block in place.</p>
+  </section>
+
+  <!-- ── CMD: BOOTSTRAP ── -->
+  <section id="cmd-bootstrap">
+    <h2><code class="cmd">tether bootstrap [--yes]</code></h2>
+    <p>One-time codebase scan. Builds the initial feature ledger.</p>
+    <ol>
+      <li>Scans all Python files with <strong>tree-sitter</strong> (no LLM, instant)</li>
+      <li>Sends the symbol map to <strong>Haiku</strong> to propose features</li>
+      <li>Opens your <code>$EDITOR</code> to review and correct proposals</li>
+      <li>Generates edge cases and <strong>pytest stubs</strong> for every must-handle case</li>
+    </ol>
+    <div class="callout callout-tip">
+      <p><strong>Tip:</strong> Use <code>--yes</code> to skip the editor and auto-accept proposals. Good for CI or trying it quickly. Edit <code>.tether/ledger.yaml</code> afterward to correct any misidentified features.</p>
+    </div>
+    <p><strong>Cost:</strong> ~$0.08 for a 3-file project, ~$1.50 for a 33-feature codebase. One-time only.</p>
+  </section>
+
+  <!-- ── CMD: PLAN ── -->
+  <section id="cmd-plan">
+    <h2><code class="cmd">tether plan &lt;file&gt; --intent "..."</code></h2>
+    <p>Run this <em>before</em> making a change. Predicts which features are at risk and at what severity.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether plan src/ratelimiter.py --intent "replace in-memory window with Redis"</span></div>
+    </div>
+    <p>Writes <code>.tether/PLAN.md</code>. If any feature is at medium or high risk, Claude Code will <strong>STOP and ask you</strong> before proceeding. The plan includes:</p>
+    <ul>
+      <li>Per-feature risk level and reason</li>
+      <li>Risk distribution chart + confidence interval</li>
+      <li>Specific mitigation suggestions for medium/high risks</li>
+      <li>Edge cases to handle if the change adds a new feature</li>
+    </ul>
+  </section>
+
+  <!-- ── CMD: COVERAGE ── -->
+  <section id="cmd-coverage">
+    <h2><code class="cmd">tether coverage</code></h2>
+    <p>Shows the edge-case bell curve for every feature and how much of the must-handle risk surface has test coverage.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether coverage</span></div>
+    </div>
+    <p>Use this to spot features with gaps in their test coverage before making a change. The bar width for each frequency bucket shows the relative concentration of edge cases — the "shape" of that feature's risk profile.</p>
+    <p>Coverage % = must-handle edge cases with a test file / total must-handle edge cases.</p>
+  </section>
+
+  <!-- ── CMD: WATCH ── -->
+  <section id="cmd-watch">
+    <h2><code class="cmd">tether watch</code></h2>
+    <p>Long-running file watcher. On every file change:</p>
+    <ol>
+      <li>Computes a diff against the last known state</li>
+      <li>Runs pytest for the affected features only (usually &lt; 10s)</li>
+      <li>Asks Haiku whether the diff aligns with the feature ledger (intent check)</li>
+      <li>Checks for removed or changed function signatures (structural invariants)</li>
+      <li>Writes a severity-graded note to <code>.tether/DRIFT.md</code></li>
+    </ol>
+    <p>Severity levels: <span style="color:var(--muted)">none</span> → <span style="color:var(--yellow)">soft</span> → <span style="color:var(--orange)">intentional</span> → <span style="color:var(--red)">hard</span> → <span style="color:var(--red)"><b>critical</b></span></p>
+    <div class="callout callout-warn">
+      <p><strong>How drift works:</strong> When severity reaches <code>hard</code> or higher, tether writes a one-line pointer into <code>CLAUDE.md</code>. Claude Code reads CLAUDE.md at the start of every turn — so it sees the drift note immediately on its next message.</p>
+    </div>
+  </section>
+
+  <!-- ── CMD: ASK ── -->
+  <section id="cmd-ask">
+    <h2><code class="cmd">tether ask "&lt;question&gt;"</code></h2>
+    <p>Natural-language Q&amp;A against the feature ledger. No full-codebase search — just the structured metadata.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="p">$</span> <span class="w">tether ask "which features would break if I change the RateLimiter constructor?"</span>
+
+<span class="c">Consulting ledger (3 features)...</span>
+
+<span class="b">## Impact of changing RateLimiter constructor</span>
+
+Changing the <span class="p">RateLimiter</span> constructor signature would directly affect:
+
+- <span class="p">f1 Per-user Rate Limiting</span> — the constructor sets <span class="p">limit</span> and <span class="p">window_seconds</span>;
+  all callers (including middleware) must be updated.
+- <span class="p">f3 Request Middleware</span> — instantiates <span class="p">_limiter = RateLimiter()</span> at module
+  level using default args. A signature change would break this import.
+
+f2 (JWT Auth) is not affected — it does not import from ratelimiter.py.
+
+<span class="c">confidence: high · features: f1, f3 · cost: $0.0048</span></div>
+    </div>
+    <p>Cost: ~$0.005 per question.</p>
+  </section>
+
+  <!-- ── CMD: VERIFY ── -->
+  <section id="cmd-verify">
+    <h2><code class="cmd">tether verify</code></h2>
+    <p>Post-change validation. Run this after finishing a unit of work.</p>
+    <ul>
+      <li>Re-runs all tests for features whose files changed this session</li>
+      <li>Auto-promotes <code>building</code> features to <code>active</code> when tests pass</li>
+      <li>Clears <code>.tether/DRIFT.md</code> if all tests pass</li>
+      <li>Snapshots the ledger and writes a session report to <code>.tether/reports/</code></li>
+    </ul>
+  </section>
+
+  <!-- ── CONFIG ── -->
+  <section id="config">
+    <h2>Config reference</h2>
+    <p>Stored at <code>.tether/config.yaml</code>. All fields are optional — shown with defaults.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span><span class="term-title">.tether/config.yaml</span></div>
+      <div class="term-body"><span class="pu">project</span>:
+  <span class="pu">name</span>: my-project
+  <span class="pu">root</span>: .                      <span class="c"># where to scan</span>
+
+<span class="pu">watcher</span>:
+  <span class="pu">provider</span>: anthropic        <span class="c"># "anthropic" | "ollama"</span>
+  <span class="pu">model</span>: claude-haiku-4-5-20251001
+  <span class="pu">budget_usd_per_session</span>: 5.0
+  <span class="pu">ollama_base_url</span>: http://localhost:11434
+
+<span class="pu">scan</span>:
+  <span class="pu">exclude_dirs</span>: []             <span class="c"># extra dirs to skip during bootstrap</span>
+
+<span class="pu">plan</span>:
+  <span class="pu">edge_case_count</span>: 8           <span class="c"># max edge cases per feature</span>
+  <span class="pu">ask_threshold</span>: medium        <span class="c"># none|low|medium|high</span>
+
+<span class="pu">ledger</span>:
+  <span class="pu">path</span>: .tether/ledger.yaml
+  <span class="pu">tests_dir</span>: .tether/tests/</div>
+    </div>
+  </section>
+
+  <!-- ── OLLAMA ── -->
+  <section id="ollama">
+    <h2>Ollama (free, local)</h2>
+    <p>Run tether entirely offline with a local <a href="https://ollama.com">Ollama</a> server. No API key needed.</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span></div>
+      <div class="term-body"><span class="c"># Install Ollama, then pull a model</span>
+<span class="p">$</span> <span class="w">ollama pull qwen2.5:7b</span>
+<span class="p">$</span> <span class="w">ollama serve</span></div>
+    </div>
+    <p>Then set your config:</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-red"></span><span class="dot dot-yellow"></span><span class="dot dot-green"></span><span class="term-title">.tether/config.yaml</span></div>
+      <div class="term-body"><span class="pu">watcher</span>:
+  <span class="pu">provider</span>: <span class="g">ollama</span>
+  <span class="pu">model</span>: qwen2.5:7b</div>
+    </div>
+    <p>Recommended models (best to acceptable): <code>qwen2.5:7b</code> → <code>mistral:7b</code> → <code>llama3.2:3b</code></p>
+    <div class="callout callout-tip">
+      <p><strong>Quality note:</strong> Ollama models produce slightly lower-quality edge cases and impact analysis than Haiku. For the bootstrap (one-time run), Haiku is recommended. Ollama works well for the continuous <code>tether watch</code> loop where many small checks happen throughout a session.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Highlight active nav link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.nav-link');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>

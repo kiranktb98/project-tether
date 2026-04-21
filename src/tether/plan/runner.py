@@ -83,23 +83,76 @@ def run_plan(
         new_feature_edge_cases=new_feature_edge_cases,
     )
 
-    # Summary
+    # Summary — risk distribution + confidence
     console.print(f"\n[green]Plan written to[/green] [cyan]{notes_path}[/cyan]")
-    console.print(
-        f"  Affected features: [cyan]{len(result.affected_features)}[/cyan]  "
-        f"Overall risk: [cyan]{result.overall_risk}[/cyan]  "
-        f"Cost: [dim]${model.session_cost_usd:.4f}[/dim]"
-    )
+    _print_risk_distribution(result)
+    console.print(f"  Cost: [dim]${model.session_cost_usd:.4f}[/dim]")
 
     if result.ask_user_required:
         console.print(
-            "\n[yellow]STOP[/yellow] — plan contains medium/high risks. "
+            "\n[bold yellow]STOP[/bold yellow] — plan contains medium/high risks. "
             "Read [cyan].tether/PLAN.md[/cyan] and ask the user before proceeding."
         )
     elif result.affected_features:
+        console.print(f"\nRead [cyan].tether/PLAN.md[/cyan] for the full analysis.")
+
+
+def _print_risk_distribution(result) -> None:
+    """Print a visual risk-spread bar chart + confidence indicator."""
+    from rich.text import Text
+
+    n = len(result.risks)
+    if n == 0:
         console.print(
-            f"\nRead [cyan].tether/PLAN.md[/cyan] for the full analysis."
+            f"\n  [dim]No features touch [cyan]{result.file_path}[/cyan] — "
+            "no impact detected.[/dim]"
         )
+        return
+
+    dist = result.risk_distribution
+    max_count = max(dist.values()) or 1
+    bar_width = 20
+
+    _FULL = "█"
+    _EMPTY = "░"
+
+    _RISK_COLORS = {"none": "dim", "low": "green", "medium": "yellow", "high": "red"}
+    _RISK_LABELS = {
+        "none":   "  none  ",
+        "low":    "  low   ",
+        "medium": " medium ",
+        "high":   "  high  ",
+    }
+    _THRESHOLD_LABELS = {"medium": " ← ask threshold", "high": " ← STOP"}
+
+    console.print(f"\n  [bold]Risk spread[/bold]  [dim]({n} feature{'s' if n != 1 else ''} analyzed)[/dim]")
+
+    for level in ("none", "low", "medium", "high"):
+        count = dist[level]
+        color = _RISK_COLORS[level]
+        filled = round(bar_width * count / max_count) if count else 0
+        bar = _FULL * filled + _EMPTY * (bar_width - filled)
+
+        t = Text()
+        t.append(f"  {_RISK_LABELS[level]} ", style=f"bold {color}")
+        t.append(bar, style=color)
+        t.append(f"  {count}", style=f"bold {color}")
+        if level in _THRESHOLD_LABELS and count > 0:
+            t.append(_THRESHOLD_LABELS[level], style="dim italic")
+        console.print(t)
+
+    # Confidence row
+    confidence = result.confidence
+    conf_color = {"high": "green", "medium": "yellow", "low": "red"}[confidence]
+    conf_desc = {
+        "high":   "risks clustered — prediction is reliable",
+        "medium": "moderate spread — treat with care",
+        "low":    "high variance — Haiku is uncertain, review PLAN.md carefully",
+    }[confidence]
+    console.print(
+        f"\n  Confidence: [bold {conf_color}]{confidence}[/bold {conf_color}]"
+        f"  [dim]{conf_desc}[/dim]"
+    )
 
 
 def _looks_like_new_feature(intent: str) -> bool:
