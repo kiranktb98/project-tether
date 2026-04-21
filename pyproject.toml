@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tether-engine"
-version = "0.8.0"
+version = "1.1.0"
 description = "An impact-analysis and edge-case engine for coding agents"
 readme = "README.md"
 license = { text = "Apache-2.0" }

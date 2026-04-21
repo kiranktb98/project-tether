@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import difflib
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Literal
 
 import yaml
 
-from tether.bootstrap.scanner import _PARSER, _PY_LANGUAGE, _node_text
 from tether.ledger.queries import features_touching_file
-from tether.ledger.schema import Feature, Ledger
+from tether.ledger.schema import Ledger
 from tether.prompts.templates import (
     INTENT_SYSTEM,
     INTENT_TOOL_NAME,
@@ -21,6 +19,10 @@ from tether.prompts.templates import (
 from tether.watcher_models.base import WatcherModel
 
 IntentVerdict = Literal["aligned", "neutral", "drifted", "looks_intentional"]
+
+# Diffs larger than this get split at function/class boundaries before
+# being sent to Haiku. Keep this comfortably below Haiku's context, but
+# large enough that typical edits fit in one call.
 _DIFF_CHUNK_LINES = 300
 
 
@@ -33,7 +35,16 @@ class IntentResult:
 
 
 def compute_diff(old_content: str, new_content: str, file_path: str) -> str:
-    """Return a unified diff string."""
+    """Return a unified diff string.
+
+    If old_content is empty (file is brand new or watcher hadn't cached it),
+    returns an empty string — we don't intent-check full-file dumps; they
+    produce noisy, low-signal verdicts and burn tokens.
+    """
+    if not old_content:
+        return ""
+    if old_content == new_content:
+        return ""
     return "".join(
         difflib.unified_diff(
             old_content.splitlines(keepends=True),
@@ -57,14 +68,20 @@ def run_intent_check(
     For diffs > DIFF_CHUNK_LINES lines, splits by function/class boundary
     and runs one check per chunk.
     """
+    if not diff.strip():
+        return IntentResult(verdict="neutral", reason="Empty diff.")
+
     affected = features_touching_file(ledger, file_path)
     if not affected:
-        return IntentResult(verdict="neutral", reason="No features touch this file.")
+        return IntentResult(
+            verdict="neutral", reason="No features in the ledger touch this file."
+        )
 
     features_yaml = yaml.dump(
         [{"id": f.id, "name": f.name, "description": f.description} for f in affected],
         default_flow_style=False,
         allow_unicode=True,
+        sort_keys=False,
     )
     failing_str = "\n".join(failing_test_names or []) or "(none)"
 
@@ -75,13 +92,18 @@ def run_intent_check(
         )
 
     # Large diff — chunk it
-    chunks = _split_diff_by_boundary(diff, file_path)
+    chunks = _split_diff_by_boundary(diff, max_lines=_DIFF_CHUNK_LINES)
     chunk_results: list[IntentResult] = []
     for chunk_diff in chunks:
+        if not chunk_diff.strip():
+            continue
         chunk_result = _check_single_diff(
             file_path, chunk_diff, features_yaml, failing_str, model
         )
         chunk_results.append(chunk_result)
+
+    if not chunk_results:
+        return IntentResult(verdict="neutral", reason="No non-empty diff chunks.")
 
     return _aggregate_chunk_results(chunk_results)
 
@@ -105,8 +127,11 @@ def _check_single_diff(
         tool_name=INTENT_TOOL_NAME,
         tool_schema=INTENT_TOOL_SCHEMA,
     )
+    verdict = raw.get("verdict", "neutral")
+    if verdict not in ("aligned", "neutral", "drifted", "looks_intentional"):
+        verdict = "neutral"
     return IntentResult(
-        verdict=raw.get("verdict", "neutral"),  # type: ignore[arg-type]
+        verdict=verdict,  # type: ignore[arg-type]
         reason=raw.get("reason", ""),
         affected_feature_ids=raw.get("affected_feature_ids", []),
     )
@@ -130,30 +155,45 @@ def _aggregate_chunk_results(results: list[IntentResult]) -> IntentResult:
     )
 
 
-def _split_diff_by_boundary(diff: str, file_path: str) -> list[str]:
-    """Split a unified diff into chunks at function/class boundaries.
+def _split_diff_by_boundary(diff: str, max_lines: int = _DIFF_CHUNK_LINES) -> list[str]:
+    """Split a unified diff into chunks bounded by max_lines.
 
-    Returns a list of diff sub-strings, each <= DIFF_CHUNK_LINES lines.
-    Falls back to line-count splitting if tree-sitter is unavailable.
+    Prefers to cut at function/class boundary lines. If the current
+    buffer exceeds max_lines, forces a split at the next boundary or at
+    max_lines + 50% when no boundary is in sight. Always returns at
+    least one chunk.
     """
     lines = diff.splitlines(keepends=True)
     chunks: list[str] = []
     current: list[str] = []
+    hard_cap = int(max_lines * 1.5)
 
     for line in lines:
         current.append(line)
-        # Split at function/class definition lines in the diff
+
         stripped = line.lstrip("+-").lstrip()
         is_boundary = (
-            stripped.startswith("def ") or
-            stripped.startswith("class ") or
-            stripped.startswith("async def ")
+            stripped.startswith("def ")
+            or stripped.startswith("class ")
+            or stripped.startswith("async def ")
         )
-        if is_boundary and len(current) >= _DIFF_CHUNK_LINES:
+
+        # Prefer to cut at a boundary once we're past the soft limit.
+        if is_boundary and len(current) >= max_lines:
+            # Keep the boundary line as the start of the NEXT chunk so
+            # Haiku sees the new function header alongside its body.
+            boundary_line = current.pop()
+            chunks.append("".join(current))
+            current = [boundary_line]
+            continue
+
+        # No boundary in sight — force a hard split to avoid 10x-oversized
+        # chunks when a diff lacks function headers (e.g. a big YAML change).
+        if len(current) >= hard_cap:
             chunks.append("".join(current))
             current = []
 
     if current:
         chunks.append("".join(current))
 
-    return chunks or [diff]
+    return [c for c in chunks if c] or [diff]

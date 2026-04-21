@@ -16,6 +16,7 @@ TETHER_SUBDIRS = [
     "ledger.history",
     "tests",
     "reports",
+    "cache/files",
 ]
 
 

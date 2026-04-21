@@ -72,11 +72,10 @@ def run_bootstrap(config_path: str | None = None, verbose: bool = False, yes: bo
 
 def _run_bootstrap_inner(cfg, tether_dir: Path, *, verbose: bool, yes: bool) -> None:
     """Inner bootstrap logic — called after the lock is held."""
-    if cfg.watcher.provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        console.print(
-            "[red]Error:[/red] ANTHROPIC_API_KEY is not set. "
-            "Bootstrap requires a watcher model (Haiku or Ollama)."
-        )
+    from tether.env import check_provider_ready
+    err = check_provider_ready(cfg.watcher.provider)
+    if err:
+        console.print(f"[red]Error:[/red] {err}")
         return
 
     event_log = EventLog(tether_dir)
@@ -135,60 +134,73 @@ def _run_bootstrap_inner(cfg, tether_dir: Path, *, verbose: bool, yes: bool) -> 
     # -------------------------------------------------------------------------
     # Step 4: Edge case backfill + test generation
     # -------------------------------------------------------------------------
-    console.print(f"[dim]Step 4/4 — Generating edge cases and tests...[/dim]")
+    # Resume semantics: a feature that already has edge cases is assumed to
+    # have been through this step on a previous run. Skip it so re-running
+    # bootstrap after an interruption doesn't double the edge case list or
+    # burn a Haiku call per existing feature.
+    needs_edge_cases = [f for f in ledger.features if not f.edge_cases]
+    skipped = len(ledger.features) - len(needs_edge_cases)
 
-    features_to_process = [f for f in ledger.features]
+    if skipped:
+        console.print(
+            f"[dim]Step 4/4 — Generating edge cases and tests "
+            f"({skipped} feature{'s' if skipped != 1 else ''} already have edge cases, skipping)...[/dim]"
+        )
+    else:
+        console.print(f"[dim]Step 4/4 — Generating edge cases and tests...[/dim]")
+
     errors: list[str] = []
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-        transient=True,
-    ) as progress:
-        task = progress.add_task("Generating...", total=len(features_to_process))
+    if needs_edge_cases:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Generating...", total=len(needs_edge_cases))
 
-        for feature in features_to_process:
-            progress.update(task, description=f"Feature {feature.id}: {feature.name[:40]}")
+            for feature in needs_edge_cases:
+                progress.update(task, description=f"Feature {feature.id}: {feature.name[:40]}")
 
-            try:
-                edge_cases = generate_edge_cases(
-                    feature,
-                    model,
-                    project_name=cfg.project.name,
-                    count=cfg.plan.edge_case_count,
-                )
-            except Exception as e:
-                errors.append(f"{feature.id}: edge case generation failed: {e}")
-                progress.advance(task)
-                continue
-
-            feature.edge_cases.extend(edge_cases)
-
-            # Generate tests for must_handle edge cases only
-            for ec in edge_cases:
-                if not ec.must_handle:
-                    continue
                 try:
-                    generate_test_for_edge_case(
+                    edge_cases = generate_edge_cases(
                         feature,
-                        ec,
                         model,
-                        tests_base_dir=cfg.ledger.tests_dir,
-                        project_root=project_root,
+                        project_name=cfg.project.name,
+                        count=cfg.plan.edge_case_count,
                     )
                 except Exception as e:
-                    errors.append(f"{feature.id}/{ec.id}: test generation failed: {e}")
+                    errors.append(f"{feature.id}: edge case generation failed: {e}")
+                    progress.advance(task)
+                    continue
 
-            # Persist progress after each feature so interrupted bootstraps
-            # still leave behind usable edge case and test metadata.
-            save_ledger(
-                ledger,
-                cfg.ledger.path,
-                history_dir=cfg.ledger.history_dir,
-                snapshot=False,
-            )
-            progress.advance(task)
+                feature.edge_cases.extend(edge_cases)
+
+                # Generate tests for must_handle edge cases only
+                for ec in edge_cases:
+                    if not ec.must_handle:
+                        continue
+                    try:
+                        generate_test_for_edge_case(
+                            feature,
+                            ec,
+                            model,
+                            tests_base_dir=cfg.ledger.tests_dir,
+                            project_root=project_root,
+                        )
+                    except Exception as e:
+                        errors.append(f"{feature.id}/{ec.id}: test generation failed: {e}")
+
+                # Persist progress after each feature so interrupted bootstraps
+                # still leave behind usable edge case and test metadata.
+                save_ledger(
+                    ledger,
+                    cfg.ledger.path,
+                    history_dir=cfg.ledger.history_dir,
+                    snapshot=False,
+                )
+                progress.advance(task)
 
     # Save a final snapshot once the whole bootstrap run completes.
     save_ledger(ledger, cfg.ledger.path, history_dir=cfg.ledger.history_dir, snapshot=True)
