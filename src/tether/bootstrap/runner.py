@@ -92,13 +92,18 @@ def _run_bootstrap_inner(cfg, tether_dir: Path, *, verbose: bool, yes: bool) -> 
     scan = scan_project(
         project_root,
         ignore_dirs=set(cfg.scan.exclude_dirs) if cfg.scan.exclude_dirs else None,
+        languages=[cfg.project.language],
     )
-    console.print(f"  Found [cyan]{len(scan.files)}[/cyan] Python files.")
+    console.print(
+        f"  Found [cyan]{len(scan.files)}[/cyan] source files "
+        f"([dim]{cfg.project.language}[/dim])."
+    )
 
     if not scan.files:
         console.print(
-            "[yellow]No Python files found in the project root.[/yellow] "
-            "Is this a Python project?"
+            f"[yellow]No {cfg.project.language} source files found in the "
+            f"project root.[/yellow] Check [cyan]project.language[/cyan] in "
+            f".tether/config.yaml."
         )
         return
 
@@ -177,20 +182,24 @@ def _run_bootstrap_inner(cfg, tether_dir: Path, *, verbose: bool, yes: bool) -> 
 
                 feature.edge_cases.extend(edge_cases)
 
-                # Generate tests for must_handle edge cases only
-                for ec in edge_cases:
-                    if not ec.must_handle:
-                        continue
-                    try:
-                        generate_test_for_edge_case(
-                            feature,
-                            ec,
-                            model,
-                            tests_base_dir=cfg.ledger.tests_dir,
-                            project_root=project_root,
-                        )
-                    except Exception as e:
-                        errors.append(f"{feature.id}/{ec.id}: test generation failed: {e}")
+                # Generate tests for must_handle edge cases only.
+                # Test generation emits pytest scaffolds, so skip it for
+                # non-Python projects — the jest/vitest equivalent isn't
+                # wired yet and we'd otherwise write unrunnable files.
+                if cfg.project.language == "python":
+                    for ec in edge_cases:
+                        if not ec.must_handle:
+                            continue
+                        try:
+                            generate_test_for_edge_case(
+                                feature,
+                                ec,
+                                model,
+                                tests_base_dir=cfg.ledger.tests_dir,
+                                project_root=project_root,
+                            )
+                        except Exception as e:
+                            errors.append(f"{feature.id}/{ec.id}: test generation failed: {e}")
 
                 # Persist progress after each feature so interrupted bootstraps
                 # still leave behind usable edge case and test metadata.

@@ -8,9 +8,14 @@ from pathlib import Path
 from typing import Annotated
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
+
+# Supported project languages. "polyglot" means scan every known language.
+# Kept here rather than imported from the scanner so the config module
+# stays import-cheap (no tree-sitter parsing work on load).
+SUPPORTED_LANGUAGES = ("python", "javascript", "typescript", "polyglot")
 
 console = Console()
 
@@ -22,6 +27,16 @@ class ProjectConfig(BaseModel):
     name: str = "my-project"
     root: str = "."
     language: str = "python"
+
+    @field_validator("language")
+    @classmethod
+    def _validate_language(cls, v: str) -> str:
+        if v not in SUPPORTED_LANGUAGES:
+            raise ValueError(
+                f"Unsupported language '{v}'. Must be one of: "
+                f"{', '.join(SUPPORTED_LANGUAGES)}."
+            )
+        return v
 
 
 class WatcherConfig(BaseModel):
