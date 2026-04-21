@@ -263,8 +263,16 @@ def run_init(config_path: str | None = None, verbose: bool = False) -> None:
     notes_path = upsert_claude_md(cfg.worker.notes_file)
     console.print(f"[green]OK[/green] Tether instructions written to [cyan]{notes_path}[/cyan]")
 
-    # Update .gitignore
+    # Update .gitignore (include .env so a real key isn't committed)
     _ensure_gitignore_entry(".tether/")
+    _ensure_gitignore_entry(".env")
+
+    # Scaffold a .env.example so new contributors see which vars they need
+    # to set. We never overwrite an existing one — it may have been
+    # customized.
+    env_example_path = _ensure_env_example()
+    if env_example_path:
+        console.print(f"[green]OK[/green] Template written to [cyan]{env_example_path}[/cyan]")
 
     console.print(
         f"\n[green]Tether is ready.[/green] Run [cyan]tether bootstrap[/cyan] to scan "
@@ -283,3 +291,28 @@ def _ensure_gitignore_entry(entry: str) -> None:
             fh.write(f"\n# Tether runtime state\n{entry}\n")
     else:
         path.write_text(f"# Tether runtime state\n{entry}\n", encoding="utf-8")
+
+
+_ENV_EXAMPLE_TEMPLATE = """\
+# Tether reads these automatically via tether/env.py on startup.
+# Copy this file to .env and fill in the values. Never commit .env itself.
+
+# Required when watcher.provider = anthropic (the default).
+# Get a key at https://console.anthropic.com/
+ANTHROPIC_API_KEY=
+
+# Not needed when watcher.provider = ollama. If you are using Ollama and
+# your server isn't on the default port, set ollama_base_url in
+# .tether/config.yaml instead.
+"""
+
+
+def _ensure_env_example() -> Path | None:
+    """Create .env.example if it doesn't exist. Returns the path written,
+    or None if the file already exists (in which case we leave it alone —
+    the project may have customized which vars it documents)."""
+    path = Path(".env.example")
+    if path.exists():
+        return None
+    path.write_text(_ENV_EXAMPLE_TEMPLATE, encoding="utf-8")
+    return path

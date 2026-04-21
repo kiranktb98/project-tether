@@ -33,6 +33,17 @@ console = Console()
 _prev_test_results: dict[str, TestRunResult] = {}
 
 
+def _rel_path_or_abs(file_path: str) -> str:
+    """Return a cwd-relative forward-slash path, or the absolute path as a
+    fallback if the file isn't under cwd (different drive on Windows,
+    symlink pointing outside the project, etc.). Never raises."""
+    try:
+        rel = Path(file_path).relative_to(Path.cwd())
+        return str(rel).replace("\\", "/")
+    except ValueError:
+        return str(Path(file_path)).replace("\\", "/")
+
+
 class TetherEventHandler(FileSystemEventHandler):
     def __init__(
         self,
@@ -102,8 +113,11 @@ class TetherEventHandler(FileSystemEventHandler):
         # Extension whitelist
         if not any(file_path.endswith(ext) for ext in (".py", ".md", ".yaml", ".toml", ".json")):
             return False
-        # Ignore globs
-        rel = str(Path(file_path).relative_to(Path.cwd())).replace("\\", "/")
+        # Ignore globs — compare by relative path when possible, otherwise
+        # by absolute path. Path.relative_to raises ValueError on Windows
+        # when the file is on a different drive or reached via a symlink
+        # that doesn't resolve under cwd.
+        rel = _rel_path_or_abs(file_path)
         for pattern in self._config.watch.ignore_globs:
             if fnmatch.fnmatch(rel, pattern):
                 return False
@@ -123,7 +137,7 @@ class TetherEventHandler(FileSystemEventHandler):
     def _handle_file_change(self, file_path: str) -> None:
         """Run all checks for a changed file."""
         ledger = self._ledger_holder[0]
-        rel_path = str(Path(file_path).relative_to(Path.cwd())).replace("\\", "/")
+        rel_path = _rel_path_or_abs(file_path)
 
         console.print(f"\n[dim]File changed:[/dim] [cyan]{rel_path}[/cyan]")
         self._manifest.record_file_change()
@@ -262,6 +276,9 @@ def run_watch(config_path: str | None = None, verbose: bool = False) -> None:
     model = create_watcher_model(cfg, event_log=event_log, session_id=manifest.session_id)
 
     file_cache = PersistentFileCache(tether_dir / "cache" / "files")
+    pruned = file_cache.prune()
+    if pruned and verbose:
+        console.print(f"[dim]Pruned {pruned} stale cache entries.[/dim]")
 
     # Snapshot all feature files at startup. The persistent cache survives
     # across restarts, so only overwrite the cached content when the file
