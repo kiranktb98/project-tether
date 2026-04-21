@@ -23,7 +23,16 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 from pathlib import Path
+
+# Sensible defaults — a typical Python project has well under 1000 tracked
+# files, and even with 2 MB per file the cache stays under 2 GB. A cache
+# entry older than 30 days almost certainly belongs to a file that has been
+# deleted or renamed to something the watcher didn't catch; pruning it
+# keeps the directory tidy without risking useful state.
+_DEFAULT_MAX_ENTRIES = 1000
+_DEFAULT_MAX_AGE_DAYS = 30
 
 
 class PersistentFileCache:
@@ -33,10 +42,18 @@ class PersistentFileCache:
     debounced handler so concurrent writes to the same path don't occur.
     """
 
-    def __init__(self, cache_dir: Path) -> None:
+    def __init__(
+        self,
+        cache_dir: Path,
+        *,
+        max_entries: int = _DEFAULT_MAX_ENTRIES,
+        max_age_days: int = _DEFAULT_MAX_AGE_DAYS,
+    ) -> None:
         self._dir = cache_dir
         self._dir.mkdir(parents=True, exist_ok=True)
         self._mem: dict[str, str] = {}
+        self._max_entries = max_entries
+        self._max_age_seconds = max_age_days * 86400
 
     def _key_path(self, abs_path: str) -> Path:
         # sha1 is fine here — not security-sensitive, just a filename hash.
@@ -87,3 +104,52 @@ class PersistentFileCache:
         self.delete(old_abs_path)
         if content:
             self.set(new_abs_path, content)
+
+    def prune(self) -> int:
+        """Drop stale entries: anything older than max_age_days, and the
+        oldest entries past max_entries. Returns the number of files
+        removed. Safe to call on startup — the in-memory state is lazily
+        repopulated on next get().
+
+        Pruning only touches the on-disk files. The in-memory dict is
+        cleared for pruned keys so a subsequent get() correctly sees the
+        cache miss rather than returning stale content.
+        """
+        try:
+            entries = [
+                (p, p.stat().st_mtime)
+                for p in self._dir.glob("*.txt")
+            ]
+        except OSError:
+            return 0
+
+        now = time.time()
+        to_remove: list[Path] = []
+
+        for path, mtime in entries:
+            if now - mtime > self._max_age_seconds:
+                to_remove.append(path)
+
+        # After age-based pruning, if we're still over the entry cap,
+        # remove the oldest survivors until we're at cap. Newest entries
+        # are most likely to match an active file.
+        survivors = [(p, m) for p, m in entries if p not in to_remove]
+        if len(survivors) > self._max_entries:
+            survivors.sort(key=lambda pm: pm[1])  # oldest first
+            overflow = len(survivors) - self._max_entries
+            to_remove.extend(p for p, _ in survivors[:overflow])
+
+        removed = 0
+        for path in to_remove:
+            try:
+                path.unlink()
+                removed += 1
+            except OSError:
+                pass
+
+        if removed:
+            # Invalidate in-memory entries whose backing file is gone.
+            # Cheaper to drop the whole dict than recompute each hash.
+            self._mem.clear()
+
+        return removed

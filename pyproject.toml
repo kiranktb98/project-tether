@@ -40,3 +40,7 @@ include = ["src/tether"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: tests that call real external services (Anthropic API, Ollama). Skipped by default; run with -m integration.",
+]
+addopts = "-m 'not integration'"
