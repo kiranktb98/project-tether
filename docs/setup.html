@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tether — Setup Guide</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --cyan: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --orange: #e3b341;
+      --purple: #bc8cff;
+      --term-bg: #0d1117;
+      --term-border: #21262d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── layout ── */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 240px; height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0;
+    }
+    .sidebar-logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .sidebar-logo h1 { font-size: 20px; color: var(--cyan); }
+    .sidebar-logo p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .nav-section { padding: 8px 20px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .nav-link { display: block; padding: 6px 20px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 2px solid transparent; }
+    .nav-link:hover, .nav-link.active { color: var(--cyan); border-left-color: var(--cyan); background: rgba(88,166,255,.05); }
+
+    .main { margin-left: 240px; padding: 48px 56px; max-width: 900px; }
+    section { margin-bottom: 72px; }
+
+    h2 { font-size: 24px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+    h3 { font-size: 16px; margin: 28px 0 10px; color: var(--cyan); }
+    p  { margin-bottom: 12px; color: var(--muted); }
+    strong { color: var(--text); }
+    a { color: var(--cyan); }
+    ul, ol { margin: 0 0 12px 20px; color: var(--muted); }
+    li { margin-bottom: 4px; }
+
+    /* ── hero ── */
+    .hero {
+      background: linear-gradient(135deg, #161b22 0%, #0d1117 60%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      margin-bottom: 48px;
+      text-align: center;
+    }
+    .hero h1 { font-size: 36px; color: var(--cyan); margin-bottom: 8px; }
+    .hero p  { font-size: 16px; color: var(--muted); max-width: 520px; margin: 0 auto; }
+    .badge-row { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .badge { font-size: 12px; padding: 4px 12px; border-radius: 20px; background: rgba(88,166,255,.1); border: 1px solid rgba(88,166,255,.3); color: var(--cyan); }
+
+    /* ── step cards ── */
+    .step-list { display: flex; flex-direction: column; gap: 0; margin: 24px 0; }
+    .step {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(88,166,255,.12);
+      border: 1px solid rgba(88,166,255,.3);
+      color: var(--cyan);
+      font-size: 15px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-body { flex: 1; }
+    .step-body h3 { margin: 0 0 8px; font-size: 15px; color: var(--text); }
+    .step-body p  { margin-bottom: 10px; font-size: 14px; }
+
+    /* ── callouts ── */
+    .callout {
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: var(--muted);
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .callout-icon { flex-shrink: 0; font-size: 16px; line-height: 1.5; }
+    .callout.green  { background: rgba(63,185,80,.08);  border: 1px solid rgba(63,185,80,.25); }
+    .callout.yellow { background: rgba(210,153,34,.08); border: 1px solid rgba(210,153,34,.25); }
+    .callout.red    { background: rgba(248,81,73,.08);  border: 1px solid rgba(248,81,73,.25); }
+    .callout.blue   { background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.25); }
+    .callout.green strong  { color: var(--green); }
+    .callout.yellow strong { color: var(--yellow); }
+    .callout.red strong    { color: var(--red); }
+    .callout.blue strong   { color: var(--cyan); }
+
+    /* ── terminal blocks ── */
+    .term {
+      background: var(--term-bg);
+      border: 1px solid var(--term-border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 14px 0 20px;
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+    }
+    .term-bar {
+      background: #21262d;
+      padding: 8px 14px;
+      display: flex; gap: 7px; align-items: center;
+      border-bottom: 1px solid var(--term-border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f56; } .dot-y { background: #ffbd2e; } .dot-g { background: #27c93f; }
+    .term-body { padding: 16px 20px; line-height: 1.65; }
+    .term-body .prompt { color: var(--green); }
+    .term-body .cmd    { color: var(--text); }
+    .term-body .comment{ color: var(--muted); }
+    .term-body .out    { color: #6e7681; }
+    .term-body .ok     { color: var(--green); }
+    .term-body .warn   { color: var(--yellow); }
+    .term-body .err    { color: var(--red); }
+    .term-body .hl     { color: var(--cyan); }
+    .term-body .dim    { color: var(--muted); }
+
+    /* ── prereq grid ── */
+    .prereq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+    .prereq-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .prereq-card .title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .prereq-card .sub   { font-size: 13px; color: var(--muted); }
+    .prereq-card .ver   { font-size: 12px; color: var(--green); margin-top: 6px; font-family: monospace; }
+
+    /* ── option tabs ── */
+    .option-tabs { display: flex; gap: 0; margin: 16px 0 0; border-bottom: 1px solid var(--border); }
+    .option-tab {
+      padding: 8px 20px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .option-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+    .option-panel { display: none; padding-top: 16px; }
+    .option-panel.active { display: block; }
+
+    /* ── what to expect ── */
+    .expect-row {
+      display: flex; gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 10px 0;
+      align-items: flex-start;
+    }
+    .expect-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+    .expect-body .label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .expect-body .desc  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    /* ── file tree ── */
+    .filetree {
+      background: var(--term-bg);
+      border: 1px solid var(--term-border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--muted);
+      margin: 14px 0;
+    }
+    .filetree .dir   { color: var(--cyan); }
+    .filetree .file  { color: var(--text); }
+    .filetree .note  { color: var(--muted); font-style: italic; }
+
+    /* ── two-col ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+    .box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .box h4 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .box p, .box li { font-size: 13px; }
+
+    /* ── cost table ── */
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+    th { text-align: left; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--border); color: var(--text); font-weight: 600; font-size: 13px; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); vertical-align: top; }
+    td strong { color: var(--text); }
+
+    @media (max-width: 860px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 32px 20px; }
+      .prereq-grid, .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── sidebar ─────────────────────────────────────────────────── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Tether</h1>
+    <p>Setup Guide — v0.8</p>
+  </div>
+
+  <span class="nav-section">Getting started</span>
+  <a class="nav-link" href="#prereqs">Prerequisites</a>
+  <a class="nav-link" href="#install">Install from source</a>
+  <a class="nav-link" href="#api-key">API key</a>
+
+  <span class="nav-section">First run</span>
+  <a class="nav-link" href="#init">tether init</a>
+  <a class="nav-link" href="#bootstrap">tether bootstrap</a>
+  <a class="nav-link" href="#verify">Verify it works</a>
+
+  <span class="nav-section">Options</span>
+  <a class="nav-link" href="#ollama">Use Ollama (free)</a>
+  <a class="nav-link" href="#your-project">Your own project</a>
+
+  <span class="nav-section">Reference</span>
+  <a class="nav-link" href="#what-was-created">What was created</a>
+  <a class="nav-link" href="#costs">Cost expectations</a>
+  <a class="nav-link" href="#troubleshoot">Troubleshooting</a>
+  <a class="nav-link" href="#next">Next steps</a>
+</nav>
+
+<!-- ── main ─────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <div class="hero">
+    <h1>Setting Up Tether</h1>
+    <p>Install from the GitHub repo, connect it to your project, and run your first bootstrap in under 10 minutes.</p>
+    <div class="badge-row">
+      <span class="badge">Python 3.11+</span>
+      <span class="badge">Not on PyPI yet</span>
+      <span class="badge">Claude Haiku or Ollama</span>
+      <span class="badge">~5 min setup</span>
+    </div>
+  </div>
+
+  <!-- ── prerequisites ── -->
+  <section id="prereqs">
+    <h2>Prerequisites</h2>
+    <p>You need four things before installing. All are free except the Anthropic API key (which you can skip if you use Ollama instead).</p>
+
+    <div class="prereq-grid">
+      <div class="prereq-card">
+        <div class="title">Python</div>
+        <div class="sub">3.11 or newer. Check with:</div>
+        <div class="ver">python --version</div>
+      </div>
+      <div class="prereq-card">
+        <div class="title">Git</div>
+        <div class="sub">To clone the repo. Check with:</div>
+        <div class="ver">git --version</div>
+      </div>
+      <div class="prereq-card">
+        <div class="title">pip or uv</div>
+        <div class="sub">For editable installs. uv is faster but optional.</div>
+        <div class="ver">pip --version  <span style="color:#6e7681">or</span>  uv --version</div>
+      </div>
+      <div class="prereq-card">
+        <div class="title">Anthropic API key</div>
+        <div class="sub">Used for Haiku calls. Free tier available. Or use Ollama instead — see below.</div>
+        <div class="ver">platform.anthropic.com/keys</div>
+      </div>
+    </div>
+
+    <div class="callout blue">
+      <span class="callout-icon">ℹ</span>
+      <div><strong>No PyPI package yet.</strong> Tether is in active development. Install it as an editable local package directly from the cloned repo. When it reaches PyPI you'll be able to do <code style="color:var(--cyan)">pip install tether-engine</code> — for now follow the steps below.</div>
+    </div>
+  </section>
+
+  <!-- ── install ── -->
+  <section id="install">
+    <h2>Install from source</h2>
+    <p>Clone the repo and install it as an editable package. This gives you the <code style="color:var(--cyan)">tether</code> CLI command and lets you pull updates with a simple <code style="color:var(--cyan)">git pull</code>.</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="comment"># 1. Clone the repository</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">git clone https://github.com/kiranktb98/project-tether.git</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">cd project-tether</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># 2a. Install with pip (standard)</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">pip install -e .</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># 2b. Or install with uv (faster, recommended)</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">uv pip install -e .</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># 3. Confirm the CLI is available</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">tether --version</span></div>
+        <div><span class="ok">tether, version 0.8.0</span></div>
+      </div>
+    </div>
+
+    <div class="callout green">
+      <span class="callout-icon">✓</span>
+      <div><strong>Editable install means live updates.</strong> Any time you do <code style="color:var(--green)">git pull</code> inside the cloned folder, you get the latest version immediately — no reinstall needed.</div>
+    </div>
+
+    <h3>Installing Ollama support (optional)</h3>
+    <p>If you want to use a local model instead of the Anthropic API, install the optional <code style="color:var(--cyan)">httpx</code> dependency:</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="prompt">$</span> <span class="cmd">pip install -e ".[ollama]"</span></div>
+        <div><span class="comment"># installs httpx for Ollama HTTP calls</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── api key ── -->
+  <section id="api-key">
+    <h2>API key</h2>
+    <p>Tether uses Claude Haiku for impact analysis and edge case generation. You need an Anthropic API key. Skip this section if you're going the <a href="#ollama">Ollama route</a>.</p>
+
+    <div class="option-tabs" id="key-tabs">
+      <div class="option-tab active" onclick="switchTab('key','env')">Environment variable</div>
+      <div class="option-tab" onclick="switchTab('key','dotenv')">Project .env file</div>
+    </div>
+
+    <div id="key-env" class="option-panel active">
+      <div class="term">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+        <div class="term-body">
+          <div><span class="comment"># macOS / Linux — add to ~/.zshrc or ~/.bashrc for persistence</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">export ANTHROPIC_API_KEY="sk-ant-..."</span></div>
+          <div>&nbsp;</div>
+          <div><span class="comment"># Windows PowerShell — add to $PROFILE for persistence</span></div>
+          <div><span class="prompt">></span> <span class="cmd">$env:ANTHROPIC_API_KEY = "sk-ant-..."</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="key-dotenv" class="option-panel">
+      <p>Tether automatically loads a <code style="color:var(--cyan)">.env</code> file from the project root on startup.</p>
+      <div class="term">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+        <div class="term-body">
+          <div><span class="comment"># Create a .env file in your project root</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">echo 'ANTHROPIC_API_KEY=sk-ant-...' &gt; .env</span></div>
+          <div>&nbsp;</div>
+          <div><span class="comment"># Make sure .env is in your .gitignore!</span></div>
+          <div><span class="prompt">$</span> <span class="cmd">echo '.env' &gt;&gt; .gitignore</span></div>
+        </div>
+      </div>
+      <div class="callout yellow">
+        <span class="callout-icon">⚠</span>
+        <div><strong>Never commit your API key.</strong> Always add <code style="color:var(--yellow)">.env</code> to <code style="color:var(--yellow)">.gitignore</code> before creating it.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── init ── -->
+  <section id="init">
+    <h2>tether init</h2>
+    <p><code style="color:var(--cyan)">tether init</code> creates the <code style="color:var(--cyan)">.tether/</code> directory, writes a default config, and injects tether's workflow rules into your <code style="color:var(--cyan)">CLAUDE.md</code>. Run it once per project, from the project root.</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="comment"># Navigate to your project root first</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">cd /path/to/your/project</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">tether init</span></div>
+        <div>&nbsp;</div>
+        <div><span class="out">  Project name [my-project]: </span><span class="hl">my-project</span></div>
+        <div><span class="out">  Language [python]: </span><span class="hl">python</span></div>
+        <div><span class="out">  Watcher provider [anthropic]: </span><span class="hl">anthropic</span></div>
+        <div><span class="out">  Budget per session USD [5.00]: </span><span class="hl">5.00</span></div>
+        <div>&nbsp;</div>
+        <div><span class="ok">  ✓ Created .tether/config.yaml</span></div>
+        <div><span class="ok">  ✓ Created .tether/</span></div>
+        <div><span class="ok">  ✓ Updated CLAUDE.md with tether workflow rules</span></div>
+      </div>
+    </div>
+
+    <h3>What init creates</h3>
+    <div class="filetree">
+      <div><span class="dir">.tether/</span></div>
+      <div>&nbsp;&nbsp;├── <span class="file">config.yaml</span>  <span class="note">← project settings (provider, budget, paths)</span></div>
+      <div>&nbsp;&nbsp;├── <span class="file">ledger.yaml</span>  <span class="note">← feature ledger (populated by bootstrap)</span></div>
+      <div>&nbsp;&nbsp;├── <span class="file">PLAN.md</span>      <span class="note">← impact analysis output (written by tether plan)</span></div>
+      <div>&nbsp;&nbsp;├── <span class="file">DRIFT.md</span>     <span class="note">← drift alerts (written by tether watch)</span></div>
+      <div>&nbsp;&nbsp;└── <span class="dir">tests/</span>        <span class="note">← generated edge-case tests (one dir per feature)</span></div>
+    </div>
+
+    <h3>CLAUDE.md integration</h3>
+    <p>Init writes a managed block into <code style="color:var(--cyan)">CLAUDE.md</code> that teaches Claude Code when to run tether and what to do with the output. This is how tether integrates with Claude Code — no hook setup, no extensions needed.</p>
+
+    <div class="callout blue">
+      <span class="callout-icon">ℹ</span>
+      <div><strong>Already have a CLAUDE.md?</strong> The block is injected at the top with start/end markers, so your existing content is preserved. Running <code style="color:var(--cyan)">tether init</code> again safely replaces only the managed block.</div>
+    </div>
+  </section>
+
+  <!-- ── bootstrap ── -->
+  <section id="bootstrap">
+    <h2>tether bootstrap</h2>
+    <p>Bootstrap scans your codebase, proposes an initial feature ledger, and generates edge cases for each feature. Run it once after init. It makes LLM calls — expect 2–5 minutes on a typical project.</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="prompt">$</span> <span class="cmd">tether bootstrap</span></div>
+        <div>&nbsp;</div>
+        <div><span class="dim">  Scanning codebase...</span></div>
+        <div><span class="dim">  Found 12 Python files, 4 directories</span></div>
+        <div><span class="dim">  Proposing features (chunk 1/2)...</span></div>
+        <div><span class="dim">  Proposing features (chunk 2/2)...</span></div>
+        <div><span class="dim">  Merging proposals → 6 features</span></div>
+        <div>&nbsp;</div>
+        <div><span class="warn">  ────────────────────────────────────────────────────</span></div>
+        <div><span class="warn">  Review the proposed ledger in your editor.</span></div>
+        <div><span class="warn">  Edit freely — delete duplicates, add missing features.</span></div>
+        <div><span class="warn">  Save and close when done.</span></div>
+        <div><span class="warn">  ────────────────────────────────────────────────────</span></div>
+        <div>&nbsp;</div>
+        <div><span class="dim">  [editor opens .tether/ledger.yaml for review]</span></div>
+        <div>&nbsp;</div>
+        <div><span class="dim">  Generating edge cases for f1 (rate limiting)...</span></div>
+        <div><span class="dim">  Generating edge cases for f2 (auth)...</span></div>
+        <div><span class="dim">  ...</span></div>
+        <div>&nbsp;</div>
+        <div><span class="ok">  Bootstrap complete. Ledger version 1 written.</span></div>
+        <div><span class="dim">  Cost: $1.42  ·  6 features  ·  41 edge cases</span></div>
+      </div>
+    </div>
+
+    <h3>The review step is important</h3>
+    <p>Bootstrap opens your text editor with the proposed ledger before generating edge cases. This is the most important step — the quality of everything tether does downstream depends on the ledger being accurate.</p>
+
+    <div class="two-col">
+      <div class="box">
+        <h4>What to do in the editor</h4>
+        <ul>
+          <li>Delete features that aren't real user-facing features</li>
+          <li>Merge duplicates (Haiku sometimes splits one feature in two)</li>
+          <li>Add features tether missed (ones with no files yet)</li>
+          <li>Fix file paths that are wrong</li>
+          <li>Rename features to match your own terminology</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h4>What not to worry about</h4>
+        <ul>
+          <li>Edge cases — tether generates those after you save</li>
+          <li>History — gets populated as you use tether</li>
+          <li>Completeness — you can always add features later</li>
+          <li>Perfect descriptions — one sentence is fine</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout yellow">
+      <span class="callout-icon">⚠</span>
+      <div><strong>Don't rubber-stamp.</strong> If you just save without reviewing, the ledger will contain whatever Haiku guessed. Impact analysis is only as good as the ledger. Spend 5–10 minutes here — it pays for itself immediately.</div>
+    </div>
+
+    <h3>Skip the editor with --yes</h3>
+    <p>For testing or when you want to get bootstrap done quickly and fix the ledger manually later:</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="prompt">$</span> <span class="cmd">tether bootstrap --yes</span></div>
+        <div><span class="dim">  Accepting proposed ledger without review...</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── verify it works ── -->
+  <section id="verify">
+    <h2>Verify it works</h2>
+    <p>After bootstrap, run these three commands to confirm tether is set up correctly.</p>
+
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Check the ledger</h3>
+          <p>Should show a rich table of features with their files and status.</p>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <div class="term-body">
+              <div><span class="prompt">$</span> <span class="cmd">tether ledger</span></div>
+              <div><span class="dim">  ┌──────┬─────────────────────────────┬────────┬───────┐</span></div>
+              <div><span class="dim">  │ ID   │ Feature                     │ Status │ Files │</span></div>
+              <div><span class="dim">  ├──────┼─────────────────────────────┼────────┼───────┤</span></div>
+              <div><span class="ok">  │ f1   │ Per-user rate limiting       │ active │ 2     │</span></div>
+              <div><span class="ok">  │ f2   │ JWT authentication           │ active │ 1     │</span></div>
+              <div><span class="dim">  └──────┴─────────────────────────────┴────────┴───────┘</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Check coverage</h3>
+          <p>Shows the edge-case distribution per feature and must-handle test coverage.</p>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <div class="term-body">
+              <div><span class="prompt">$</span> <span class="cmd">tether coverage</span></div>
+              <div><span class="hl">  Overall edge-case coverage</span></div>
+              <div><span class="dim">  ████████████████░░░░  78%  (7/9 must-handle tested)</span></div>
+              <div>&nbsp;</div>
+              <div><span class="hl">  Bell curve</span></div>
+              <div><span class="err">  HIGH      ██████████████████████  6 cases</span></div>
+              <div><span class="warn">  MEDIUM    ████████████░░░░░░░░░░  4 cases</span></div>
+              <div><span class="ok">  LOW       ████░░░░░░░░░░░░░░░░░░  1 case</span></div>
+              <div><span class="dim">  NEGLIG.   ░░░░░░░░░░░░░░░░░░░░░░  0 cases</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Run a test plan</h3>
+          <p>Try impact analysis on one of your files. Replace the path with a real file from your project.</p>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <div class="term-body">
+              <div><span class="prompt">$</span> <span class="cmd">tether plan src/auth.py --intent "add password reset flow"</span></div>
+              <div>&nbsp;</div>
+              <div><span class="dim">  Analyzing impact of change to src/auth.py...</span></div>
+              <div><span class="dim">  Plan written to .tether/PLAN.md</span></div>
+              <div>&nbsp;</div>
+              <div><span class="hl">  Risk spread  </span><span class="dim">(3 features analyzed)</span></div>
+              <div><span class="dim">    none    ████████████████████  2</span></div>
+              <div><span class="warn">    medium  ████████░░░░░░░░░░░░  1  ← ask threshold</span></div>
+              <div>&nbsp;</div>
+              <div><span class="ok">  Confidence: high  </span><span class="dim">risks clustered — prediction is reliable</span></div>
+              <div>&nbsp;</div>
+              <div><span class="dim">  Cost: $0.0031</span></div>
+            </div>
+          </div>
+          <p style="margin-top:10px">If this runs without errors and produces output, tether is working correctly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ollama ── -->
+  <section id="ollama">
+    <h2>Use Ollama (free, no API key)</h2>
+    <p>Tether supports Ollama as a drop-in replacement for Claude Haiku. You run Ollama locally — no API key, no cost, no data sent externally.</p>
+
+    <h3>1. Install Ollama and pull a model</h3>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="comment"># Install Ollama from ollama.ai, then:</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">ollama pull qwen2.5-coder:7b</span></div>
+        <div><span class="dim">  pulling manifest... done</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># Start the Ollama server (keep this running)</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">ollama serve</span></div>
+        <div><span class="ok">  Ollama is running on http://localhost:11434</span></div>
+      </div>
+    </div>
+
+    <div class="callout blue">
+      <span class="callout-icon">ℹ</span>
+      <div><strong>Recommended models.</strong> <code style="color:var(--cyan)">qwen2.5-coder:7b</code> works well for impact analysis and edge case generation. <code style="color:var(--cyan)">mistral:7b</code> and <code style="color:var(--cyan)">llama3.1:8b</code> are also good options. Larger models produce better results but run slower.</div>
+    </div>
+
+    <h3>2. Configure tether to use Ollama</h3>
+    <p>Edit <code style="color:var(--cyan)">.tether/config.yaml</code> in your project:</p>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="comment"># .tether/config.yaml</span></div>
+        <div><span class="hl">watcher:</span></div>
+        <div><span class="cmd">  provider: ollama</span>                    <span class="comment"># ← change from anthropic</span></div>
+        <div><span class="cmd">  model: qwen2.5-coder:7b</span>              <span class="comment"># ← your Ollama model</span></div>
+        <div><span class="cmd">  ollama_base_url: http://localhost:11434</span> <span class="comment"># ← default, change if different</span></div>
+      </div>
+    </div>
+
+    <p>No API key needed. Run <code style="color:var(--cyan)">tether bootstrap</code> as normal — it will call your local model instead.</p>
+
+    <div class="callout yellow">
+      <span class="callout-icon">⚠</span>
+      <div><strong>Ollama quality vs Haiku.</strong> Local models produce somewhat lower-quality impact analysis and edge case generation than Claude Haiku, especially on nuanced reasoning. For trying out tether or working offline, Ollama is great. For a production project, Haiku is recommended.</div>
+    </div>
+  </section>
+
+  <!-- ── your project ── -->
+  <section id="your-project">
+    <h2>Using on your own project</h2>
+    <p>The demo walkthrough above uses the <code style="color:var(--cyan)">examples/ratelimiter/</code> sample project. Here's how to set tether up on your actual codebase.</p>
+
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Navigate to your project root</h3>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <div class="term-body">
+              <div><span class="prompt">$</span> <span class="cmd">cd /path/to/your-project</span></div>
+              <div><span class="comment"># This is the directory that contains your src/ or main Python files</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Run init and bootstrap</h3>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <div class="term-body">
+              <div><span class="prompt">$</span> <span class="cmd">tether init</span></div>
+              <div><span class="prompt">$</span> <span class="cmd">tether bootstrap</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Start the watcher alongside Claude Code</h3>
+          <p>Open two terminal windows. In the first, start tether's file watcher. In the second, start Claude Code as normal.</p>
+          <div class="term">
+            <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <div class="term-body">
+              <div><span class="comment"># Terminal 1 — keep this running</span></div>
+              <div><span class="prompt">$</span> <span class="cmd">tether watch</span></div>
+              <div><span class="ok">  Watching /your-project for changes...</span></div>
+              <div>&nbsp;</div>
+              <div><span class="comment"># Terminal 2 — your Claude Code session</span></div>
+              <div><span class="prompt">$</span> <span class="cmd">claude</span></div>
+            </div>
+          </div>
+          <p style="margin-top:10px">Claude Code reads <code style="color:var(--cyan)">CLAUDE.md</code> at the start of every session. It will automatically run <code style="color:var(--cyan)">tether plan</code> before changes and check <code style="color:var(--cyan)">.tether/DRIFT.md</code> for drift alerts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── what was created ── -->
+  <section id="what-was-created">
+    <h2>What was created</h2>
+    <p>After <code style="color:var(--cyan)">init</code> + <code style="color:var(--cyan)">bootstrap</code>, your project has a new <code style="color:var(--cyan)">.tether/</code> directory. Here's what each file does:</p>
+
+    <table>
+      <thead>
+        <tr><th>File</th><th>Created by</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/config.yaml</code></td>
+          <td>tether init</td>
+          <td>Provider, model, budget, paths — edit to change settings</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/ledger.yaml</code></td>
+          <td>tether bootstrap</td>
+          <td>The feature ledger. Source of truth for features, files, edge cases, history</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/PLAN.md</code></td>
+          <td>tether plan</td>
+          <td>Impact analysis for the most recent planned change. Claude Code reads this</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/DRIFT.md</code></td>
+          <td>tether watch</td>
+          <td>Drift alerts. Written when a file change breaks a feature test. Claude Code reads this</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/tests/feature_f1/</code></td>
+          <td>tether bootstrap</td>
+          <td>Generated pytest tests for each feature's must-handle edge cases</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/events.jsonl</code></td>
+          <td>tether watch / plan</td>
+          <td>JSONL log of every model call with cost tracking</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">.tether/reports/</code></td>
+          <td>tether report</td>
+          <td>Session summaries — run <code style="color:var(--cyan)">tether report</code> to generate one</td>
+        </tr>
+        <tr>
+          <td><code style="color:var(--cyan)">CLAUDE.md</code> (block)</td>
+          <td>tether init</td>
+          <td>Workflow rules injected for Claude Code — when to run tether and what to do</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout yellow">
+      <span class="callout-icon">⚠</span>
+      <div><strong>Add .tether/ to .gitignore.</strong> The ledger and events log are local state — they should not be committed. Run <code style="color:var(--yellow)">echo '.tether/' >> .gitignore</code> if tether init didn't do this already.</div>
+    </div>
+  </section>
+
+  <!-- ── costs ── -->
+  <section id="costs">
+    <h2>Cost expectations</h2>
+    <p>Tether uses Claude Haiku for all model calls. Haiku is the cheapest Anthropic model ($1/M input tokens, $5/M output tokens). Here's what to expect:</p>
+
+    <div class="expect-row">
+      <div class="expect-icon">🔧</div>
+      <div class="expect-body">
+        <div class="label">tether bootstrap — one-time cost</div>
+        <div class="desc">~$0.80–2.00 depending on project size. A 10-feature project costs ~$0.80. A 30-feature project with detailed edge cases costs ~$1.50–2.00. This is a one-time cost.</div>
+      </div>
+    </div>
+
+    <div class="expect-row">
+      <div class="expect-icon">📋</div>
+      <div class="expect-body">
+        <div class="label">tether plan — per change</div>
+        <div class="desc">$0.003–0.02 per run. Depends on how many features are affected by the file you're changing and how many edge cases they have. Average: ~$0.006.</div>
+      </div>
+    </div>
+
+    <div class="expect-row">
+      <div class="expect-icon">👁</div>
+      <div class="expect-body">
+        <div class="label">tether watch — per file change</div>
+        <div class="desc">$0.002–0.01 per file change detected (intent check + optional drift attribution). In a typical session of 10–15 file changes, expect $0.05–0.15 for watch alone.</div>
+      </div>
+    </div>
+
+    <div class="expect-row">
+      <div class="expect-icon">💰</div>
+      <div class="expect-body">
+        <div class="label">Total per session</div>
+        <div class="desc">A typical Claude Code session with 15–20 changes runs $0.20–0.50 of Haiku overhead. The default budget cap is $5.00 per session — tether stops making model calls if this is exceeded.</div>
+      </div>
+    </div>
+
+    <div class="callout blue">
+      <span class="callout-icon">ℹ</span>
+      <div><strong>Ollama = $0.</strong> If you use the Ollama provider, all costs are $0.00 — you're running a local model. The tradeoff is somewhat lower quality in impact analysis and edge case generation.</div>
+    </div>
+  </section>
+
+  <!-- ── troubleshooting ── -->
+  <section id="troubleshoot">
+    <h2>Troubleshooting</h2>
+
+    <h3><code style="color:var(--red)">command not found: tether</code></h3>
+    <p>The package wasn't installed into a PATH-visible location. Try:</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="comment"># Make sure you installed from the cloned directory</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">cd project-tether && pip install -e .</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># If using a virtualenv, activate it first</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">source .venv/bin/activate  # or .venv\Scripts\activate on Windows</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">pip install -e /path/to/project-tether</span></div>
+      </div>
+    </div>
+
+    <h3><code style="color:var(--red)">Error: ANTHROPIC_API_KEY is not set</code></h3>
+    <p>The API key isn't in your environment. Either export it or add it to a <code style="color:var(--cyan)">.env</code> file at the project root. See the <a href="#api-key">API key section</a> above.</p>
+
+    <h3><code style="color:var(--red)">No features in ledger</code></h3>
+    <p>Bootstrap hasn't been run yet, or the ledger file is empty. Run <code style="color:var(--cyan)">tether bootstrap</code> from the project root.</p>
+
+    <h3><code style="color:var(--red)">bootstrap already running (PID ...)</code></h3>
+    <p>A previous bootstrap was interrupted and left a lock file behind. If no bootstrap is actually running:</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="prompt">$</span> <span class="cmd">rm .tether/bootstrap.lock</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">tether bootstrap</span></div>
+      </div>
+    </div>
+
+    <h3><code style="color:var(--red)">OllamaConnectionError</code></h3>
+    <p>Tether is configured to use Ollama but the server isn't running. Start it with <code style="color:var(--cyan)">ollama serve</code> in a separate terminal.</p>
+
+    <h3>The editor doesn't open during bootstrap</h3>
+    <p>Tether uses the <code style="color:var(--cyan)">$EDITOR</code> environment variable to open the draft ledger. Set it if it's not set:</p>
+    <div class="term">
+      <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+      <div class="term-body">
+        <div><span class="prompt">$</span> <span class="cmd">export EDITOR=nano   </span><span class="comment"># or vim, code, etc.</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">tether bootstrap</span></div>
+        <div>&nbsp;</div>
+        <div><span class="comment"># Or skip the editor entirely</span></div>
+        <div><span class="prompt">$</span> <span class="cmd">tether bootstrap --yes</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── next steps ── -->
+  <section id="next">
+    <h2>Next steps</h2>
+
+    <div class="expect-row">
+      <div class="expect-icon">📖</div>
+      <div class="expect-body">
+        <div class="label">Read the how-to-use guide</div>
+        <div class="desc">Detailed reference for every command — tether plan, watch, ask, coverage, verify, ledger, log, status, report. Open <code style="color:var(--cyan)">docs/how-to-use.html</code> in a browser.</div>
+      </div>
+    </div>
+
+    <div class="expect-row">
+      <div class="expect-icon">🚀</div>
+      <div class="expect-body">
+        <div class="label">Run tether plan before your next change</div>
+        <div class="desc">The core workflow: pick a file you're about to modify, run <code style="color:var(--cyan)">tether plan &lt;file&gt; --intent "what you're doing"</code>, read <code style="color:var(--cyan)">.tether/PLAN.md</code>, then make the change.</div>
+      </div>
+    </div>
+
+    <div class="expect-row">
+      <div class="expect-icon">👀</div>
+      <div class="expect-body">
+        <div class="label">Start the watcher for a live session</div>
+        <div class="desc">Run <code style="color:var(--cyan)">tether watch</code> in one terminal while Claude Code runs in another. Every file change triggers an automatic intent check and targeted test run.</div>
+      </div>
+    </div>
+
+    <div class="expect-row">
+      <div class="expect-icon">🔍</div>
+      <div class="expect-body">
+        <div class="label">Try the ask command</div>
+        <div class="desc">Natural-language queries over your feature ledger: <code style="color:var(--cyan)">tether ask "what features use auth.py?"</code> or <code style="color:var(--cyan)">tether ask "what are the must-handle edge cases for f2?"</code></div>
+      </div>
+    </div>
+
+    <div class="callout green" style="margin-top:24px">
+      <span class="callout-icon">✓</span>
+      <div><strong>You're set up.</strong> The tether workflow is: <strong>plan</strong> before changes → <strong>watch</strong> during a session → <strong>verify</strong> after finishing. Everything tether catches shows up in <code style="color:var(--cyan)">PLAN.md</code> and <code style="color:var(--cyan)">DRIFT.md</code> — files Claude Code reads automatically on every turn.</div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Tab switcher
+  function switchTab(group, id) {
+    document.querySelectorAll(`#${group}-tabs .option-tab`).forEach(t => t.classList.remove('active'));
+    document.querySelectorAll(`.option-panel[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(`${group}-${id}`).classList.add('active');
+  }
+
+  // Active nav link via IntersectionObserver
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.nav-link');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const link = document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.35 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
