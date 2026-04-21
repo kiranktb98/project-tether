@@ -33,6 +33,17 @@ console = Console()
 _prev_test_results: dict[str, TestRunResult] = {}
 
 
+_SOURCE_EXTENSIONS = (".py", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")
+
+
+def _is_source_file(file_path: str) -> bool:
+    """Intent and invariant checks only apply to parser-backed source
+    files (Python/JS/TS). Text files like .md/.yaml still trigger the
+    watcher for targeted-test runs, but skip the LLM/AST steps."""
+    lower = file_path.lower()
+    return any(lower.endswith(ext) for ext in _SOURCE_EXTENSIONS)
+
+
 def _rel_path_or_abs(file_path: str) -> str:
     """Return a cwd-relative forward-slash path, or the absolute path as a
     fallback if the file isn't under cwd (different drive on Windows,
@@ -110,8 +121,16 @@ class TetherEventHandler(FileSystemEventHandler):
 
     def _should_watch(self, file_path: str) -> bool:
         """Return True if this file should trigger checks."""
-        # Extension whitelist
-        if not any(file_path.endswith(ext) for ext in (".py", ".md", ".yaml", ".toml", ".json")):
+        # Extension whitelist — source files in supported languages plus
+        # a few text config formats that often carry feature-relevant
+        # changes (pyproject, package.json, tsconfig).
+        _WATCH_EXTENSIONS = (
+            ".py",
+            ".js", ".jsx", ".mjs", ".cjs",
+            ".ts", ".tsx",
+            ".md", ".yaml", ".toml", ".json",
+        )
+        if not any(file_path.endswith(ext) for ext in _WATCH_EXTENSIONS):
             return False
         # Ignore globs — compare by relative path when possible, otherwise
         # by absolute path. Path.relative_to raises ValueError on Windows
@@ -164,9 +183,9 @@ class TetherEventHandler(FileSystemEventHandler):
             for r in test_results:
                 _prev_test_results[r.feature_id] = r
 
-            # Step 2: Intent check (only for .py files with a non-trivial diff)
+            # Step 2: Intent check (only for source files with a non-trivial diff)
             intent_result: IntentResult | None = None
-            if file_path.endswith(".py") and diff.strip():
+            if _is_source_file(file_path) and diff.strip():
                 failing_names = [n for r in test_results for n in r.newly_failing]
                 try:
                     intent_result = run_intent_check(
@@ -181,7 +200,7 @@ class TetherEventHandler(FileSystemEventHandler):
 
             # Step 3: Invariant check
             invariant_result: InvariantResult | None = None
-            if file_path.endswith(".py"):
+            if _is_source_file(file_path):
                 invariant_result = check_invariants(file_path)
 
             # Step 4: Verdict aggregation
